@@ -1,0 +1,28 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python: FastAPI (Uvicorn)", // Nombre que verás en el menú de depuración
+            "type": "debugpy",                   // Tipo de depurador
+            "request": "launch",                // Queremos lanzar un proceso nuevo
+            "module": "uvicorn",                // Ejecuta uvicorn como módulo (python -m uvicorn)
+            "args": [
+                "app.main:app",                 // La ubicación de tu app FastAPI
+                "--reload",                     // Recarga automática en cambios (ideal para desarrollo)
+                "--host", "0.0.0.0",            // Escucha en todas las interfaces
+                "--port", "8000"                // Puerto a usar
+                // Puedes añadir más argumentos de uvicorn aquí si los necesitas
+                // por ejemplo: "--log-level", "debug"
+            ],
+            "jinja": true, // Habilitar depuración de plantillas Jinja (si las usaras)
+            "justMyCode": true, // Solo depurar tu código, no el de las librerías (puedes ponerlo en false si necesitas entrar en librerías)
+            "cwd": "${workspaceFolder}", // Asegura que se ejecute desde la raíz del proyecto
+            "envFile": "${workspaceFolder}/.env", // Carga las variables de entorno desde tu archivo .env
+            "console": "integratedTerminal" // Muestra la salida en la terminal integrada de VS Code
+        }
+        // Puedes añadir más configuraciones aquí si necesitas (ej. para ejecutar tests)
+    ]
+}

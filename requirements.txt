@@ -1,0 +1,6 @@
+fastapi
+uvicorn[standard] # Incluye websockets y otros extras útiles
+apscheduler
+python-dotenv   # Para cargar .env localmente
+pydantic-settings # Para una gestión de configuración más robusta
+alpaca-trade-api # SDK de Alpaca
