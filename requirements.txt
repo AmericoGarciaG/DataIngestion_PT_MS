@@ -1,6 +1,9 @@
-fastapi
-uvicorn[standard] # Incluye websockets y otros extras útiles
-apscheduler
-python-dotenv   # Para cargar .env localmente
-pydantic-settings # Para una gestión de configuración más robusta
-alpaca-trade-api # SDK de Alpaca
+# requirements.txt
+fastapi                 # El framework principal para construir la API y WebSockets.
+uvicorn[standard]       # El servidor ASGI que ejecuta FastAPI. [standard] incluye extras como soporte WebSocket.
+apscheduler             # Librería para programar la ejecución periódica de la descarga de datos.
+python-dotenv           # Utilidad para cargar variables de entorno desde un archivo .env (útil para desarrollo local).
+pydantic-settings       # Extensión de Pydantic para cargar configuraciones desde variables de entorno y validarlas.
+alpaca-trade-api        # El SDK oficial de Alpaca para interactuar con su API.
+pandas                  # Librería potente para trabajar con datos, especialmente DataFrames (tablas). 
+                        # La usamos para procesar las barras (OHLCV) de Alpaca.
