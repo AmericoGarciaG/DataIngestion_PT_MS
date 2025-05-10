@@ -1,0 +1,59 @@
+// For format details, see https://aka.ms/devcontainer.json. For config options, see the
+// README at: https://github.com/devcontainers/templates/tree/main/src/python
+{
+    // Nombre descriptivo para esta configuración de Dev Container
+    "name": "Python FastAPI (ms_001-ibkr)",
+
+    // Configura cómo construir la imagen del contenedor.
+    "build": {
+        // Ruta al Dockerfile, relativa a la ubicación de este archivo devcontainer.json
+        // Como devcontainer.json está en .devcontainer, subimos un nivel ("..")
+        // para encontrar el Dockerfile en la raíz del proyecto.
+        "dockerfile": "../Dockerfile",
+
+        // Establece el contexto de construcción en el directorio padre (la raíz del proyecto)
+        "context": ".."
+    },
+
+    // Configuraciones y extensiones específicas de VS Code para usar DENTRO del contenedor.
+    "customizations": {
+        "vscode": {
+            "settings": {
+                // Puedes añadir configuraciones específicas aquí si lo deseas,
+                // por ejemplo, para linters o formatters.
+                // La extensión de Python generalmente detecta el intérprete
+                // correcto del Dockerfile automáticamente.
+                // "python.defaultInterpreterPath": "/usr/local/bin/python" // Descomentar si la detección falla
+            },
+            // Lista de IDs de extensiones de VS Code a instalar automáticamente dentro del contenedor.
+            "extensions": [
+                "ms-python.python" // Extensión esencial de Python
+                // Otras extensiones útiles que podrías añadir:
+                // "ms-python.pylint",       // Linter
+                // "ms-python.black-formatter",// Formateador Black
+                // "ms-azuretools.vscode-docker" // Para interactuar con Docker desde dentro
+            ]
+        }
+    },
+
+    // Lista de puertos a reenviar desde el contenedor a tu máquina local.
+    // Esto hace que puedas acceder a localhost:8000 en tu navegador y
+    // conectarte a tu aplicación FastAPI que corre en el puerto 8000 dentro del contenedor.
+    "forwardPorts": [
+        8000
+    ],
+
+    // Comando a ejecutar DESPUÉS de que el contenedor se haya creado.
+    // Es el lugar perfecto para instalar las dependencias de Python.
+    "postCreateCommand": "pip install --no-cache-dir -r requirements.txt",
+
+    // Define el usuario con el que VS Code se conectará dentro del contenedor.
+    // Usar un usuario no-root es generalmente más seguro.
+    // 'vscode' es un usuario común creado en muchas imágenes base de dev containers.
+    // Si tu imagen base de Python no lo tiene, puedes omitir esto o
+    // necesitarás modificar tu Dockerfile para crear un usuario no-root.
+    // "remoteUser": "vscode" // Descomentar si tu imagen base tiene este usuario
+
+    // Descomenta la siguiente línea si necesitas que el contenedor corra como root.
+    // "remoteUser": "root"
+}
