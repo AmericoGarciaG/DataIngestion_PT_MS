@@ -1,0 +1,4 @@
+# Dependencias para pruebas y cliente
+websockets>=11.0.3
+asyncio>=3.4.3
+aiohttp>=3.9.3

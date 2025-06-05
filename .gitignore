@@ -1,0 +1,5 @@
+# Placeholder para: .gitignore
+#
+
+.env
+.venv/

@@ -1,0 +1,120 @@
+{
+  "directories_to_create": [
+    ".devcontainer",
+    ".github",
+    ".github/workflows",
+    ".vscode",
+    "docs",
+    "logs",
+    "service",
+    "service/app",
+    "service/tests",
+    "terraform",
+    "tools",
+    "tools/_2_backup",
+    "tools/_2_backup/backup_files",
+    "tools/_2_restore",
+    "tools/_2_restore/backed_up_files",
+    "tools/scripts",
+    "tools/scripts/f00_files_setup",
+    "tools/scripts/f03_terraform_management",
+    "tools/scripts/f04_gcp_setup",
+    "tools/scripts/f05_data",
+    "tools/scripts/f06_deployment",
+    "tools/tests"
+  ],
+  "file_mappings": {
+    "README.md": "README.md",
+    "_gitignore": ".gitignore",
+    "_dockerignore": ".dockerignore",
+
+    "devcontainer_devcontainer.json": ".devcontainer/devcontainer.json",
+    "devcontainer_Dockerfile": ".devcontainer/Dockerfile",
+
+    "_github_workflows_ci_cd.yml": ".github/workflows/ci_cd.yml",
+    "_github_workflows_deploy.yml": ".github/workflows/deploy.yml",
+
+    "vscode_launch.json": ".vscode/launch.json",
+    "vscode_settings.json": ".vscode/settings.json",
+    "vscode_tasks.json": ".vscode/tasks.json",
+    "vscode_extensions.json": ".vscode/extensions.json",
+
+    "docs_Guia_Configuracion_Proyecto.md": "docs/Guia_Configuracion_Proyecto.md",
+    "docs_Guia_Despliegue_Paso_A_Paso.md": "docs/Guia_Despliegue_Paso_A_Paso.md",
+    "docs_API_Endpoints.md": "docs/API_Endpoints.md",
+    "docs_Arquitectura.md": "docs/Arquitectura.md",
+   
+    "service_Dockerfile": "service/Dockerfile",
+    "service_requirements.txt": "service/requirements.txt",
+    "service__env": "service/.env",
+
+    "service_app___init__.py": "service/app/__init__.py",
+    "service_app_alpaca_service.py": "service/app/alpaca_service.py",
+    "service_app_config.py": "service/app/config.py",
+    "service_app_gcp_clients.py": "service/app/gcp_clients.py",
+    "service_app_main.py": "service/app/main.py",
+
+    "service_tests___init__.py": "service/tests/__init__.py",
+    "service_tests_client_test.py": "service/tests/client_test.py",
+    "service_tests_read_firestore_bars.py": "service/tests/read_firestore_bars.py",
+    "service_tests_requirements-test.txt": "service/tests/requirements-test.txt",
+    "service_tests_run_client.ps1": "service/tests/run_client.ps1",
+    "service_tests_test_alpaca_data.py": "service/tests/test_alpaca_data.py",
+    "service_tests_test_alpaca_fetch.py": "service/tests/test_alpaca_fetch.py",
+    "service_tests_test_fetch.py": "service/tests/test_fetch.py",
+
+    "terraform_main.tf": "terraform/main.tf",
+    "terraform_outputs.tf": "terraform/outputs.tf",
+    "terraform_variables.tf": "terraform/variables.tf",
+    "terraform_versions.tf": "terraform/versions.tf",
+    
+    "tools_Project_Structure.md": "tools/Project_Structure.md",
+    "tools_project_map.json": "tools/project_map.json",
+
+    "tools__2_backup__backup_files.ps1": "tools/_2_backup/_backup_files.ps1",
+    "tools__2_restore__restore_files.ps1": "tools/_2_restore/_restore_files.ps1",
+
+    "tools_scripts___init__.py": "tools/scripts/__init__.py",
+    "tools_scripts_docker-entrypoint.sh": "tools/scripts/docker-entrypoint.sh",
+    "tools_scripts_utils_general.py": "tools/scripts/utils_general.py",
+
+    "tools_scripts_f02_manage_gcp_environment.py": "tools/scripts/f02_manage_gcp_environment.py",
+  
+    "tools_scripts_f00_files_setup___init__.py": "tools/scripts/f00_files_setup/__init__.py",
+    "tools_scripts_f00_files_setup_s00_main_initial_setup.py": "tools/scripts/f00_files_setup/s00_main_initial_setup.py",
+    "tools_scripts_f00_files_setup_s01_create_structure.py": "tools/scripts/f00_files_setup/s01_create_structure.py",
+    "tools_scripts_f00_files_setup_s02_create_venv.py": "tools/scripts/f00_files_setup/s02_create_venv.py",
+    "tools_scripts_f00_files_setup_s03_setup_github_repo.py": "tools/scripts/f00_files_setup/s03_setup_github_repo.py",
+  
+    "tools_scripts_f03_terraform_management___init__.py": "tools/scripts/f03_terraform_management/__init__.py",
+    "tools_scripts_f03_terraform_management_tf_apply.py": "tools/scripts/f03_terraform_management/tf_apply.py",
+    "tools_scripts_f03_terraform_management_tf_destroy.py": "tools/scripts/f03_terraform_management/tf_destroy.py",
+    "tools_scripts_f03_terraform_management_tf_init_validate.py": "tools/scripts/f03_terraform_management/tf_init_validate.py",
+    "tools_scripts_f03_terraform_management_tf_plan.py": "tools/scripts/f03_terraform_management/tf_plan.py",
+
+    "tools_scripts_f04_gcp_setup___init__.py": "tools/scripts/f04_gcp_setup/__init__.py",
+    "tools_scripts_f04_gcp_setup_s00_main_gcp_config.py": "tools/scripts/f04_gcp_setup/s00_main_gcp_config.py",
+    "tools_scripts_f04_gcp_setup_s01_configure_sa_permissions.py": "tools/scripts/f04_gcp_setup/s01_configure_sa_permissions.py",
+    "tools_scripts_f04_gcp_setup_s02_manage_secrets.py": "tools/scripts/f04_gcp_setup/s02_manage_secrets.py",
+    "tools_scripts_f04_gcp_setup_s03_configure_workload_identity.py": "tools/scripts/f04_gcp_setup/s03_configure_workload_identity.py",
+    "tools_scripts_f04_gcp_setup_utils_gcp.py": "tools/scripts/f04_gcp_setup/utils_gcp.py",
+
+    "tools_scripts_f05_data___init__.py": "tools/scripts/f05_data/__init__.py",
+    "tools_scripts_f05_data_seed_firestore.py": "tools/scripts/f05_data/seed_firestore.py",
+
+    "tools_scripts_f06_deployment___init__.py": "tools/scripts/f06_deployment/__init__.py",
+    "tools_scripts_f06_deployment_build_and_push_docker.py": "tools/scripts/f06_deployment/build_and_push_docker.py",
+    "tools_scripts_f06_deployment_deploy_cloud_run.ps1": "tools/scripts/f06_deployment/deploy_cloud_run.ps1",
+    "tools_scripts_f06_deployment_deploy_cloud_run.py": "tools/scripts/f06_deployment/deploy_cloud_run.py",
+    "tools_scripts_f06_deployment_s00_main_deployment.py": "tools/scripts/f06_deployment/s00_main_deployment.py", 
+    "tools_scripts_f06_deployment_utils_deployment.py": "tools/scripts/f06_deployment/utils_deployment.py",
+
+    "tools_tests___init__.py": "tools/tests/__init__.py",
+    "tools_tests_client_test.py": "tools/tests/client_test.py",
+    "tools_tests_read_firestore_bars.py": "tools/tests/read_firestore_bars.py",
+
+    "tools_tests_requirements-test.txt": "tools/tests/requirements-test.txt",
+    "tools_tests_run_client.ps1": "tools/tests/run_client.ps1",
+    "tools_tests_run_fetch_test.ps1": "tools/tests/run_fetch_test.ps1"
+     }
+}
