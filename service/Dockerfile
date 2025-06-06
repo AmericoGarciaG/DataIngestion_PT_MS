@@ -37,7 +37,7 @@ COPY ./app /app/app
 # ¡NO COPIES .env, venv, .git, .vscode, etc. a la imagen Docker! (Usa .dockerignore para esto)
 
 # 7. Copiar y configurar el script de inicio
-COPY scripts/docker-entrypoint.sh /app/docker-entrypoint.sh
+COPY docker-entrypoint.sh /app/docker-entrypoint.sh
 RUN chmod +x /app/docker-entrypoint.sh
 
 # 8. Exponer Puerto:

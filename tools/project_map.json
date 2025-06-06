@@ -44,6 +44,7 @@
     "docs_API_Endpoints.md": "docs/API_Endpoints.md",
     "docs_Arquitectura.md": "docs/Arquitectura.md",
    
+    "service_docker-entrypoint.sh": "service/docker-entrypoint.sh",
     "service_Dockerfile": "service/Dockerfile",
     "service_requirements.txt": "service/requirements.txt",
     "service__env": "service/.env",
@@ -75,7 +76,6 @@
     "tools__2_restore__restore_files.ps1": "tools/_2_restore/_restore_files.ps1",
 
     "tools_scripts___init__.py": "tools/scripts/__init__.py",
-    "tools_scripts_docker-entrypoint.sh": "tools/scripts/docker-entrypoint.sh",
     "tools_scripts_utils_general.py": "tools/scripts/utils_general.py",
 
     "tools_scripts_f02_manage_gcp_environment.py": "tools/scripts/f02_manage_gcp_environment.py",
