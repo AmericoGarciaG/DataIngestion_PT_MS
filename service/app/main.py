@@ -99,7 +99,9 @@ app = FastAPI(lifespan=lifespan)
 # Health check endpoint for Cloud Run
 @app.get("/_health")
 async def health_check():
-    """Health check endpoint for Cloud Run."""
+    """
+    Endpoint de chequeo de salud simple para Cloud Run y pruebas.
+    """
     return {
         "status": "healthy",
         "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat()

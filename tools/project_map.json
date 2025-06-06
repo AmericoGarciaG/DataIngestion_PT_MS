@@ -56,13 +56,7 @@
     "service_app_main.py": "service/app/main.py",
 
     "service_tests___init__.py": "service/tests/__init__.py",
-    "service_tests_client_test.py": "service/tests/client_test.py",
-    "service_tests_read_firestore_bars.py": "service/tests/read_firestore_bars.py",
-    "service_tests_requirements-test.txt": "service/tests/requirements-test.txt",
-    "service_tests_run_client.ps1": "service/tests/run_client.ps1",
-    "service_tests_test_alpaca_data.py": "service/tests/test_alpaca_data.py",
-    "service_tests_test_alpaca_fetch.py": "service/tests/test_alpaca_fetch.py",
-    "service_tests_test_fetch.py": "service/tests/test_fetch.py",
+    "service_tests_test_alpaca_service.py": "service/tests/test_alpaca_service.py", 
 
     "terraform_main.tf": "terraform/main.tf",
     "terraform_outputs.tf": "terraform/outputs.tf",
@@ -109,6 +103,15 @@
     "tools_scripts_f06_deployment_deploy_cloud_run.ps1": "tools/scripts/f06_deployment/deploy_cloud_run.ps1",
     "tools_scripts_f06_deployment_deploy_cloud_run.py": "tools/scripts/f06_deployment/deploy_cloud_run.py",
     "tools_scripts_f06_deployment_s00_main_deployment.py": "tools/scripts/f06_deployment/s00_main_deployment.py",
-    "tools_scripts_f06_deployment_utils_deployment.py": "tools/scripts/f06_deployment/utils_deployment.py"
+    "tools_scripts_f06_deployment_utils_deployment.py": "tools/scripts/f06_deployment/utils_deployment.py",
+
+    "tools_tests___init__.py": "tools/tests/__init__.py",
+    "tools_tests_client_test.py": "tools/tests/client_test.py",
+    "tools_tests_config_test_env.ps1": "tools/tests/config_test_env.ps1",
+    "tools_tests_read_firestore_bars.py": "tools/tests/read_firestore_bars.py",
+    "tools_tests_requirements.txt": "tools/tests/requirements.txt",
+    "tools_tests_run_client.ps1": "tools/tests/run_client.ps1",
+    "tools_tests_test_alpaca_sdk.py": "tools/tests/test_alpaca_sdk.py"
+    
      }
 }

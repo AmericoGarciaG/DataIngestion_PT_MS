@@ -1,7 +1,8 @@
-﻿import asyncio
+import asyncio
 import sys
+import websockets
+import websockets.client
 from websockets.exceptions import ConnectionClosedError
-from websockets.client import connect
 import json
 import aiohttp
 
@@ -85,6 +86,7 @@ def print_data_update(parsed_data: dict, show_all_bars: bool = False):
 
 async def listen_to_alpaca_data():
     """Interactive WebSocket client for testing the Alpaca data service"""
+    # ... (código inicial sin cambios) ...
     if not await check_service_health():
         print("❌ Service is not healthy, aborting WebSocket connection attempt")
         return
@@ -97,19 +99,16 @@ async def listen_to_alpaca_data():
 
     try:
         print(f"\n🔌 Connecting to WebSocket at {ws_uri}...")
-        async with connect(ws_uri) as websocket:
+        async with websockets.client.connect(ws_uri) as websocket:
             print("✅ WebSocket connected!")
             
-            # Initial subscription to AAPL
-            symbols = ["AAPL"]
-            subscribe_msg = {
+            initial_symbols = ["AAPL"]
+            await websocket.send(json.dumps({
                 "action": "subscribe",
-                "symbols": symbols
-            }
-            await websocket.send(json.dumps(subscribe_msg))
-            print(f"📩 Subscribed to: {', '.join(symbols)}")
+                "symbols": initial_symbols
+            }))
+            print(f"📩 Subscribed to: {', '.join(initial_symbols)}")
             
-            # Create an event loop task for user input
             input_queue = asyncio.Queue()
             
             async def handle_user_input():
@@ -126,17 +125,15 @@ async def listen_to_alpaca_data():
                         print(f"Error reading input: {e}")
                         break
             
-            # Start user input handler
             input_task = asyncio.create_task(handle_user_input())
             
             try:
                 while True:
-                    # Wait for either WebSocket data or user input
                     receive_task = asyncio.create_task(websocket.recv())
-                    input_task = asyncio.create_task(input_queue.get())
+                    input_from_queue_task = asyncio.create_task(input_queue.get())
                     
                     done, pending = await asyncio.wait(
-                        [receive_task, input_task],
+                        [receive_task, input_from_queue_task],
                         return_when=asyncio.FIRST_COMPLETED
                     )
                     
@@ -144,7 +141,6 @@ async def listen_to_alpaca_data():
                         task.cancel()
                         
                     try:
-                        # Handle completed tasks
                         for task in done:
                             if task == receive_task:
                                 try:
@@ -156,7 +152,7 @@ async def listen_to_alpaca_data():
                                 except Exception as e:
                                     print(f"❌ Error processing data: {e}")
                             
-                            elif task == input_task:
+                            elif task == input_from_queue_task:
                                 cmd = await task
                                 parts = cmd.strip().split()
                                 
@@ -168,14 +164,15 @@ async def listen_to_alpaca_data():
                                     return
                                 elif parts[0] == "toggle":
                                     show_all_bars = not show_all_bars
-                                    print(f"{'📊 Showing all bars' if show_all_bars else '📊 Showing summary view'}")
+                                    print(f"📊 {'Showing all bars' if show_all_bars else 'Showing summary view'}")
                                 elif parts[0] == "subscribe" and len(parts) > 1:
-                                    symbols = parts[1:]
                                     await websocket.send(json.dumps({
                                         "action": "subscribe",
-                                        "symbols": symbols
+                                        "symbols": parts[1:]
                                     }))
-                                    print(f"📩 Updated subscription to: {', '.join(symbols)}")
+                                    # ===== CORRECCIÓN FINAL =====
+                                    print(f"📩 Updated subscription to: {', '.join(parts[1:])}") # type: ignore
+                                    # ============================
                                 else:
                                     print("❌ Unknown command")
                                     
@@ -184,17 +181,13 @@ async def listen_to_alpaca_data():
                         continue
                         
             except asyncio.CancelledError:
-                # Normal cancellation during shutdown
                 pass
             finally:
-                # Clean up tasks
-                for task in [receive_task, input_task]:
-                    if not task.done():
-                        task.cancel()
-                        try:
-                            await task
-                        except asyncio.CancelledError:
-                            pass
+                # Limpieza de tareas mejorada
+                tasks_to_cancel = [t for t in asyncio.all_tasks() if t is not asyncio.current_task()]
+                for t in tasks_to_cancel:
+                    t.cancel()
+                await asyncio.gather(*tasks_to_cancel, return_exceptions=True)
                 
     except ConnectionClosedError:
         print("❌ WebSocket connection closed unexpectedly")
