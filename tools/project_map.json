@@ -106,15 +106,7 @@
     "tools_scripts_f06_deployment_build_and_push_docker.py": "tools/scripts/f06_deployment/build_and_push_docker.py",
     "tools_scripts_f06_deployment_deploy_cloud_run.ps1": "tools/scripts/f06_deployment/deploy_cloud_run.ps1",
     "tools_scripts_f06_deployment_deploy_cloud_run.py": "tools/scripts/f06_deployment/deploy_cloud_run.py",
-    "tools_scripts_f06_deployment_s00_main_deployment.py": "tools/scripts/f06_deployment/s00_main_deployment.py", 
-    "tools_scripts_f06_deployment_utils_deployment.py": "tools/scripts/f06_deployment/utils_deployment.py",
-
-    "tools_tests___init__.py": "tools/tests/__init__.py",
-    "tools_tests_client_test.py": "tools/tests/client_test.py",
-    "tools_tests_read_firestore_bars.py": "tools/tests/read_firestore_bars.py",
-
-    "tools_tests_requirements-test.txt": "tools/tests/requirements-test.txt",
-    "tools_tests_run_client.ps1": "tools/tests/run_client.ps1",
-    "tools_tests_run_fetch_test.ps1": "tools/tests/run_fetch_test.ps1"
+    "tools_scripts_f06_deployment_s00_main_deployment.py": "tools/scripts/f06_deployment/s00_main_deployment.py",
+    "tools_scripts_f06_deployment_utils_deployment.py": "tools/scripts/f06_deployment/utils_deployment.py"
      }
 }

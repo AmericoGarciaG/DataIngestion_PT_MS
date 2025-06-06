@@ -8,17 +8,17 @@ python-dotenv               # Utilidad para cargar variables de entorno desde un
 pydantic-settings           # Extensión de Pydantic para cargar configuraciones desde variables de entorno y validarlas.
 
 # Bloque 2 - ir descomentanco conforme se avanza en las etapas del proyecto
-#google-cloud-firestore          # Cliente Python para Firestore
-#google-cloud-pubsub             # Cliente Python para Pub/Sub
-#google-cloud-resource-manager   # Cliente Python para Resource Manager
-#google-cloud-iam                # Cliente Python para IAM
-#google-cloud-secret-manager     # Cliente Python para Secret Manager
+google-cloud-firestore          # Cliente Python para Firestore
+google-cloud-pubsub             # Cliente Python para Pub/Sub
+google-cloud-resource-manager   # Cliente Python para Resource Manager
+google-cloud-iam                # Cliente Python para IAM
+google-cloud-secret-manager     # Cliente Python para Secret Manager
 
 # Bloque 3 - ir descomentanco conforme se avanza en las etapas del proyecto
-#fastapi>=0.115.12                # El framework principal para construir la API y WebSockets.
-#uvicorn[standard]>=0.27.0      # El servidor ASGI que ejecuta FastAPI. [standard] incluye extras como soporte WebSocket.
-#apscheduler>=3.10.0            # Librería para programar la ejecución periódica de la descarga de datos.
-#alpaca-py>=0.8.0               # El nuevo SDK oficial de Alpaca para interactuar con su API.
-#alpaca-trade-api>=3.0.0        # La antigua SDK de Alpaca (aún necesaria para algunas funcionalidades).
-#pandas                          # Librería potente para trabajar con datos, especialmente DataFrames (tablas). 
+fastapi>=0.115.12                # El framework principal para construir la API y WebSockets.
+uvicorn[standard]>=0.27.0      # El servidor ASGI que ejecuta FastAPI. [standard] incluye extras como soporte WebSocket.
+apscheduler>=3.10.0            # Librería para programar la ejecución periódica de la descarga de datos.
+alpaca-py>=0.8.0               # El nuevo SDK oficial de Alpaca para interactuar con su API.
+alpaca-trade-api>=3.0.0        # La antigua SDK de Alpaca (aún necesaria para algunas funcionalidades).
+pandas                          # Librería potente para trabajar con datos, especialmente DataFrames (tablas). 
                                  # La usamos para procesar las barras (OHLCV) de Alpaca.

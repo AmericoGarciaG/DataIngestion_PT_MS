@@ -308,10 +308,10 @@ Un proyecto GCP específico está creado (o verificado como activo), con factura
 1.  ✅ **Ejecutar Orquestador de Configuración GCP Post-Terraform (Script):**
     *   Desde `PROJECT_ROOT` (venv activado):
         ```bash
-        python -m scripts.f04_gcp_setup.s00_main_gcp_config 
+        python -m tools.scripts.f04_gcp_setup.s00_main_gcp_config 
         ```
         *(Este script llama a `s01_configure_sa_permissions.py`, `s02_manage_secrets.py`, `s03_configure_workload_identity.py` y `scripts.data.seed_firestore.py`)*.
-    *   **Presta atención a la salida del script `s04_configure_workload_identity.py` para obtener los valores de `GCP_WORKLOAD_IDENTITY_PROVIDER` y `GCP_SERVICE_ACCOUNT_EMAIL`.**
+    *   **Presta atención a la salida del script `s03_configure_workload_identity.py` para obtener los valores de `GCP_WORKLOAD_IDENTITY_PROVIDER` y `GCP_SERVICE_ACCOUNT_EMAIL`.**
 
 2.  ✅ **Configurar Secretos en GitHub Repository:**
     *   Ve a tu repositorio en GitHub: `Settings` > `Secrets and variables` > `Actions`.
