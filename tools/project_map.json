@@ -97,6 +97,8 @@
     "tools_scripts_f04_gcp_setup_s01_configure_sa_permissions.py": "tools/scripts/f04_gcp_setup/s01_configure_sa_permissions.py",
     "tools_scripts_f04_gcp_setup_s02_manage_secrets.py": "tools/scripts/f04_gcp_setup/s02_manage_secrets.py",
     "tools_scripts_f04_gcp_setup_s03_configure_workload_identity.py": "tools/scripts/f04_gcp_setup/s03_configure_workload_identity.py",
+    "tools_scripts_f04_gcp_setup_s04_set_github_secrets.py": "tools/scripts/f04_gcp_setup/s04_set_github_secrets.py",
+    "tools_scripts_f04_gcp_setup_s05_set_github_variables.py": "tools/scripts/f04_gcp_setup/s05_set_github_variables.py",
     "tools_scripts_f04_gcp_setup_utils_gcp.py": "tools/scripts/f04_gcp_setup/utils_gcp.py",
 
     "tools_scripts_f05_data___init__.py": "tools/scripts/f05_data/__init__.py",

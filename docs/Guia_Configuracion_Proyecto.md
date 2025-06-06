@@ -313,12 +313,10 @@ Un proyecto GCP específico está creado (o verificado como activo), con factura
         *(Este script llama a `s01_configure_sa_permissions.py`, `s02_manage_secrets.py`, `s03_configure_workload_identity.py` y `scripts.data.seed_firestore.py`)*.
     *   **Presta atención a la salida del script `s03_configure_workload_identity.py` para obtener los valores de `GCP_WORKLOAD_IDENTITY_PROVIDER` y `GCP_SERVICE_ACCOUNT_EMAIL`.**
 
-2.  ✅ **Configurar Secretos en GitHub Repository:**
-    *   Ve a tu repositorio en GitHub: `Settings` > `Secrets and variables` > `Actions`.
-    *   Crea los "Repository secrets":
-        *   `GCP_PROJECT_ID` (el ID del proyecto activo de tu `.env`).
-        *   `GCP_WORKLOAD_IDENTITY_PROVIDER` (obtenido del script anterior).
-        *   `GCP_SERVICE_ACCOUNT_EMAIL` (obtenido del script anterior).
+2.  ✅ **Revisar Configuración de Secretos en GitHub:**
+    *   El script `s00_main_gcp_config` ahora **intenta configurar automáticamente los secretos** en tu repositorio de GitHub usando la CLI `gh`.
+    *   **Acción Requerida:** Asegúrate de haberte autenticado con la CLI de GitHub (`gh auth login`) antes de ejecutar el script.
+    *   **Verificación:** El script te informará si la configuración de los secretos (`GCP_PROJECT_ID`, `GCP_WORKLOAD_IDENTITY_PROVIDER`, `GCP_SERVICE_ACCOUNT_EMAIL`) fue exitosa. Si falla, revisa los logs del script; es probable que sea un problema de autenticación o permisos con `gh`. Puedes verificar los secretos manualmente en tu repositorio: `Settings` > `Secrets and variables` > `Actions`.
 
 **Resultado de Fase 3:** GCP completamente configurado, secretos de aplicación seguros, WIF listo para CI/CD, y Firestore con datos.
 
