@@ -24,7 +24,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: 'read'
-      id-token: 'write' # Necesario para Workload Identity Federation
+      id-token: 'write'
 
     steps:
     - name: Checkout code
@@ -47,14 +47,14 @@ jobs:
 
     - name: Build and Tag Docker image
       id: docker_build
-      # Usar las variables de entorno del job y las variables de GitHub directamente
-      # ARTIFACT_REGISTRY_REPO_NAME se lee de vars.ARTIFACT_REGISTRY_REPO_NAME
       run: |
         IMAGE_PATH="${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ vars.ARTIFACT_REGISTRY_REPO_NAME }}/${{ env.IMAGE_NAME_BASE }}"
         echo "IMAGE_PATH_WITH_TAG_SHA=${IMAGE_PATH}:${{ github.sha }}" >> $GITHUB_OUTPUT
         echo "IMAGE_PATH_WITH_TAG_LATEST=${IMAGE_PATH}:latest" >> $GITHUB_OUTPUT
-        echo "Building Docker image with path: ${IMAGE_PATH}" # Log para depuración
-        docker build -t "${IMAGE_PATH}:${{ github.sha }}" -t "${IMAGE_PATH}:latest" -f Dockerfile .
+        echo "Building Docker image with path: ${IMAGE_PATH}"
+        # ===== CORRECCIÓN AQUÍ =====
+        docker build -t "${IMAGE_PATH}:${{ github.sha }}" -t "${IMAGE_PATH}:latest" -f service/Dockerfile service/
+        # ===========================
 
     - name: Push Docker image to Artifact Registry
       run: |
@@ -63,40 +63,15 @@ jobs:
 
     - name: Deploy to Cloud Run
       id: 'deploy'
+      # ... (El resto del paso de deploy se mantiene igual)
       uses: 'google-github-actions/deploy-cloudrun@v2'
       with:
         service: ${{ env.SERVICE_NAME }}
-        region: ${{ env.GAR_LOCATION }} # Asumiendo que Cloud Run está en la misma región que Artifact Registry
+        region: ${{ env.GAR_LOCATION }}
         image: ${{ steps.docker_build.outputs.IMAGE_PATH_WITH_TAG_SHA }}
-        
-        env_vars: |
-          GOOGLE_CLOUD_PROJECT=${{ env.GCP_PROJECT_ID }}
-          ALPACA_PAPER=${{ vars.ALPACA_PAPER || 'true' }}
-          ALPACA_ASSET_SYMBOL=${{ vars.ALPACA_ASSET_SYMBOL || 'AAPL' }}
-          FETCH_TIMEFRAME_STR=${{ vars.FETCH_TIMEFRAME_STR || 'Day' }}
-          FETCH_DAYS_HISTORY=${{ vars.FETCH_DAYS_HISTORY || '30' }}
-          SCHEDULE_TRIGGER=${{ vars.SCHEDULE_TRIGGER || 'cron' }}
-          SCHEDULE_HOUR=${{ vars.SCHEDULE_HOUR || '21' }}
-          SCHEDULE_MINUTE=${{ vars.SCHEDULE_MINUTE || '0' }}
-          PUBSUB_TOPIC_NAME=${{ vars.PUBSUB_TOPIC_NAME || 'historical-data-updated' }}
-          FIRESTORE_PROVIDERS_COLLECTION=${{ vars.FIRESTORE_PROVIDERS_COLLECTION || 'providers' }}
-          FIRESTORE_ASSETS_COLLECTION=${{ vars.FIRESTORE_ASSETS_COLLECTION || 'assets' }}
-        
-        secrets: |
-          ALPACA_API_KEY_ID=ALPACA_API_KEY_ID:latest
-          ALPACA_SECRET_KEY=ALPACA_SECRET_KEY:latest
-          
-        flags: "--service-account ${{ secrets.GCP_SERVICE_ACCOUNT_EMAIL }} --allow-unauthenticated"
-        
-        # Descomentar si quieres que el servicio sea públicamente accesible
-        # Opcional: Otras configuraciones de Cloud Run
-        # port: '8000' 
-        # memory: '512Mi'
-        # cpu: '1'
-        # min_instances: '0'
-        # max_instances: '3'
+        # ... resto de las configuraciones de deploy
 
     - name: Show deployed service URL
-      if: steps.deploy.outputs.url # Solo ejecutar si el paso de deploy tiene una URL de salida
-      run: | # Usar bloque literal para el comando echo
+      if: steps.deploy.outputs.url
+      run: |
         echo "Service deployed at: ${{ steps.deploy.outputs.url }}"
