@@ -80,77 +80,105 @@ async def read_root():
 # --- Lógica del WebSocket ---
 class ConnectionManager:
     def __init__(self):
+        # El diccionario ahora almacena un set de símbolos para cada conexión
         self.active_connections: Dict[WebSocket, Set[str]] = {}
         self._lock = asyncio.Lock()
 
-    async def connect(self, websocket: WebSocket, symbols: Optional[list[str]] = None):
+    async def connect(self, websocket: WebSocket):
+        """Acepta una nueva conexión WebSocket y la añade a la lista."""
         await websocket.accept()
         async with self._lock:
-            self.active_connections[websocket] = set(symbols or [])
+            # Inicialmente, el cliente no está suscrito a nada.
+            self.active_connections[websocket] = set()
+        logger.info(f"WebSocket client connected: {websocket.client}")
 
     async def disconnect(self, websocket: WebSocket):
+        """Elimina una conexión WebSocket de la lista."""
         async with self._lock:
-            self.active_connections.pop(websocket, None)
+            if websocket in self.active_connections:
+                del self.active_connections[websocket]
+        logger.info(f"WebSocket client disconnected: {websocket.client}")
 
     async def update_subscription(self, websocket: WebSocket, symbols: list[str]):
+        """Actualiza la suscripción de símbolos para una conexión específica."""
         async with self._lock:
             if websocket in self.active_connections:
                 self.active_connections[websocket] = set(symbols)
+                logger.info(f"Client {websocket.client} updated subscription to: {symbols}")
 
     async def broadcast_data(self, data: dict):
-        # ... (código sin cambios)
-        disconnected = []
+        """Envía datos a todos los clientes conectados, filtrando por su suscripción."""
+        if not self.active_connections:
+            return
+
+        # Prepara los datos JSON una sola vez
+        full_data_json = json.dumps(data)
+        
+        # Crear una copia de las conexiones para iterar de forma segura
         connections_to_notify = list(self.active_connections.items())
+
         for websocket, symbols in connections_to_notify:
             try:
-                filtered_data = data.copy()
-                if "bars" in filtered_data and symbols:
+                # Si el cliente tiene suscripciones, filtra los datos.
+                if symbols:
+                    filtered_data = data.copy()
                     filtered_data["bars"] = {
-                        symbol: bars for symbol, bars in filtered_data["bars"].items()
+                        symbol: bars for symbol, bars in data.get("bars", {}).items()
                         if symbol in symbols
                     }
-                await websocket.send_json(filtered_data)
-            except Exception as e:
-                logger.error(f"Error sending data to client: {e}")
-                disconnected.append(websocket)
-        
-        if disconnected:
-            async with self._lock:
-                for websocket in disconnected:
-                    self.active_connections.pop(websocket, None)
+                    await websocket.send_json(filtered_data)
+                # Si no tiene suscripciones, envía todos los datos.
+                else:
+                    await websocket.send_text(full_data_json) # Envía el JSON pre-calculado
+            except Exception:
+                # La conexión probablemente se cerró, se limpiará en el disconnect.
+                pass
+
 
 manager = ConnectionManager()
 
+
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
-    # La lógica para recibir el mensaje de suscripción primero es más robusta.
+    """
+    Maneja las conexiones WebSocket.
+    1. Acepta la conexión.
+    2. Envía el estado actual.
+    3. Entra en un bucle para escuchar mensajes de suscripción.
+    """
+    await manager.connect(websocket)
+    
     try:
-        await websocket.accept() # Aceptar la conexión primero
-        logger.info(f"WebSocket client connected: {websocket.client}. Waiting for subscription message.")
+        # Enviar el estado más reciente tan pronto como se conecten
+        # (sin filtrar, ya que aún no están suscritos a nada específico).
+        await websocket.send_json(last_fetch_status)
         
-        raw_message = await websocket.receive_json()
-        initial_symbols = []
-        if isinstance(raw_message, dict) and raw_message.get("action") == "subscribe":
-            initial_symbols = raw_message.get("symbols", [])
-        
-        # Ahora que tenemos los símbolos, registramos la conexión completa
-        await manager.connect(websocket, initial_symbols) # Esta línea ahora solo añade al diccionario
-        logger.info(f"Client {websocket.client} subscribed to symbols: {initial_symbols}")
-
-        # Enviar estado inicial filtrado
-        initial_status = last_fetch_status.copy()
-        if initial_symbols and "bars" in initial_status:
-            initial_status["bars"] = {s: b for s, b in initial_status["bars"].items() if s in initial_symbols}
-        await websocket.send_json(initial_status)
-        
+        # Bucle principal para escuchar comandos del cliente
         while True:
-            message = await websocket.receive_json()
-            # ... resto de la lógica del bucle ...
+            message_text = await websocket.receive_text()
+            try:
+                message_data = json.loads(message_text)
+                if isinstance(message_data, dict):
+                    action = message_data.get("action")
+                    if action == "subscribe":
+                        symbols = message_data.get("symbols", [])
+                        if isinstance(symbols, list):
+                            await manager.update_subscription(websocket, symbols)
+                            # Reenviar datos filtrados después de la suscripción
+                            filtered_status = last_fetch_status.copy()
+                            if symbols and "bars" in filtered_status:
+                                filtered_status["bars"] = {s: b for s, b in filtered_status["bars"].items() if s in symbols}
+                            await websocket.send_json(filtered_status)
+
+            except json.JSONDecodeError:
+                logger.warning(f"Received invalid JSON from client {websocket.client}: {message_text}")
+            except Exception as e:
+                logger.error(f"Error processing message from client {websocket.client}: {e}")
 
     except WebSocketDisconnect:
-        logger.info(f"WebSocket client disconnected: {websocket.client}")
+        logger.info(f"Client {websocket.client} disconnected.")
     except Exception as e:
-        logger.error(f"WebSocket error for client {websocket.client}: {e}", exc_info=True)
+        logger.error(f"An unexpected error occurred with client {websocket.client}: {e}", exc_info=True)
     finally:
         await manager.disconnect(websocket)
 
