@@ -6,7 +6,7 @@ from websockets.exceptions import ConnectionClosedError
 import json
 import aiohttp
 
-CLOUD_RUN_URL = "https://data-ingestion-pt-ms-turv6zz6na-uc.a.run.app"
+CLOUD_RUN_URL = "https://data-ingestion-pt-ms-121878084635.us-central1.run.app"
 
 async def check_service_health():
     """Verify service is running via HTTP health check endpoint"""

@@ -1,22 +1,18 @@
 # .github/workflows/ci_cd.yml
-# Este archivo define un workflow de GitHub Actions para construir y desplegar una aplicación en Google Cloud Run
-# usando Artifact Registry para almacenar las imágenes Docker.
+# VERSIÓN FINAL Y CORREGIDA
+
 name: Build and Deploy to Cloud Run
 
 on:
   push:
     branches:
-      - main # O la rama que uses para producción
+      - main
 
 env:
   GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
-  # Leer GAR_LOCATION y SERVICE_NAME de las GitHub Variables
-  # Si no existen, se usarán los defaults especificados después del '||'
   GAR_LOCATION: ${{ vars.GAR_LOCATION || 'us-central1' }}
   SERVICE_NAME: ${{ vars.SERVICE_NAME || 'data-ingestion-pt-ms' }}
-  # ARTIFACT_REGISTRY_REPO_NAME se leerá directamente de vars en el paso de build
-  # IMAGE_NAME_BASE se usará como el nombre de la imagen dentro del repo de Artifact Registry
-  IMAGE_NAME_BASE: ${{ vars.SERVICE_NAME || 'data-ingestion-pt-ms' }} # Usar el mismo que SERVICE_NAME por simplicidad
+  IMAGE_NAME_BASE: ${{ vars.SERVICE_NAME || 'data-ingestion-pt-ms' }}
 
 jobs:
   build-and-deploy:
@@ -52,9 +48,8 @@ jobs:
         echo "IMAGE_PATH_WITH_TAG_SHA=${IMAGE_PATH}:${{ github.sha }}" >> $GITHUB_OUTPUT
         echo "IMAGE_PATH_WITH_TAG_LATEST=${IMAGE_PATH}:latest" >> $GITHUB_OUTPUT
         echo "Building Docker image with path: ${IMAGE_PATH}"
-        # ===== CORRECCIÓN AQUÍ =====
+        # Usamos la versión corregida del build, que apunta a la carpeta 'service'
         docker build -t "${IMAGE_PATH}:${{ github.sha }}" -t "${IMAGE_PATH}:latest" -f service/Dockerfile service/
-        # ===========================
 
     - name: Push Docker image to Artifact Registry
       run: |
@@ -63,13 +58,33 @@ jobs:
 
     - name: Deploy to Cloud Run
       id: 'deploy'
-      # ... (El resto del paso de deploy se mantiene igual)
       uses: 'google-github-actions/deploy-cloudrun@v2'
       with:
         service: ${{ env.SERVICE_NAME }}
         region: ${{ env.GAR_LOCATION }}
         image: ${{ steps.docker_build.outputs.IMAGE_PATH_WITH_TAG_SHA }}
-        # ... resto de las configuraciones de deploy
+        
+        # Inyecta las variables de entorno desde las "Repository Variables" de GitHub
+        env_vars: |
+          GOOGLE_CLOUD_PROJECT_ID=${{ env.GCP_PROJECT_ID }}
+          ALPACA_PAPER=${{ vars.ALPACA_PAPER || 'true' }}
+          ALPACA_ASSET_SYMBOL=${{ vars.ALPACA_ASSET_SYMBOL || 'AAPL' }}
+          FETCH_TIMEFRAME_STR=${{ vars.FETCH_TIMEFRAME_STR || '1day' }}
+          FETCH_DAYS_HISTORY=${{ vars.FETCH_DAYS_HISTORY || '30' }}
+          SCHEDULE_TRIGGER=${{ vars.SCHEDULE_TRIGGER || 'cron' }}
+          SCHEDULE_HOUR=${{ vars.SCHEDULE_HOUR || '21' }}
+          SCHEDULE_MINUTE=${{ vars.SCHEDULE_MINUTE || '0' }}
+          PUBSUB_TOPIC_NAME=${{ vars.PUBSUB_TOPIC_NAME || 'historical-data-updated' }}
+          FIRESTORE_PROVIDERS_COLLECTION=${{ vars.FIRESTORE_PROVIDERS_COLLECTION || 'providers' }}
+          FIRESTORE_ASSETS_COLLECTION=${{ vars.FIRESTORE_ASSETS_COLLECTION || 'assets' }}
+        
+        # Monta los secretos de GCP (Alpaca keys) en el servicio
+        secrets: |
+          ALPACA_API_KEY_ID=ALPACA_API_KEY_ID:latest
+          ALPACA_SECRET_KEY=ALPACA_SECRET_KEY:latest
+          
+        # Flags cruciales para los permisos del servicio
+        flags: "--service-account ${{ secrets.GCP_SERVICE_ACCOUNT_EMAIL }} --allow-unauthenticated"
 
     - name: Show deployed service URL
       if: steps.deploy.outputs.url
