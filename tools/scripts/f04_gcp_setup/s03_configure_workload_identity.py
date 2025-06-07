@@ -185,3 +185,57 @@ if __name__ == "__main__":
     success, _, _, _ = main() # Solo nos importa el éxito aquí
     if not success:
         sys.exit(1)
+
+'''
+s03_configure_workload_identity.py
+Propósito: Este script configura el binding de IAM (Identity and Access Management) necesario en una Cuenta de Servicio (Service Account - SA) de Google Cloud Platform (GCP) para permitir que Workload Identity Federation (WIF) funcione. Específicamente, otorga el rol roles/iam.workloadIdentityUser a un "PrincipalSet" que representa una identidad externa (en este caso, un repositorio de GitHub) sobre la SA de la aplicación. Esto permite que los workflows de GitHub Actions se autentiquen como la SA especificada sin necesidad de exportar claves de SA.
+
+Funcionamiento Principal:
+
+Carga de Entorno: Lee variables del archivo service/.env, incluyendo el ID del proyecto GCP, el nombre corto de la SA, el ID final del Workload Identity Pool (WIF Pool), el ID del proveedor WIF dentro de ese pool, y los detalles del repositorio de GitHub (propietario y nombre).
+Verificación de Credenciales ADC: Comprueba las Credenciales Predeterminadas de Aplicación (ADC) para autenticarse con GCP.
+Obtención del Número de Proyecto: Utiliza el cliente ResourceManager para obtener el número de proyecto de GCP, que es necesario para construir el nombre completo del WIF Pool.
+Construcción de Identificadores WIF:
+Construye el nombre completo del recurso del WIF Pool (ej. projects/{project_number}/locations/global/workloadIdentityPools/{pool_id}).
+Construye el nombre completo del proveedor WIF que se usará en los secretos de GitHub (ej. projects/{project_number}/locations/global/workloadIdentityPools/{pool_id}/providers/{provider_id}).
+Construye el PrincipalSet que representa al repositorio de GitHub (ej. principalSet://iam.googleapis.com/{full_wif_pool_name_path}/attribute.repository/{github_owner}/{github_repo_name}).
+Obtención de la Política IAM de la SA: Recupera la política IAM actual de la Service Account especificada.
+Modificación de la Política IAM:
+Busca un binding existente para el rol roles/iam.workloadIdentityUser.
+Si el binding existe y el PrincipalSet no es miembro, lo añade.
+Si el binding no existe, crea uno nuevo con el PrincipalSet como miembro.
+Aplicación de Cambios: Si se realizaron modificaciones en la política, actualiza la política IAM de la Service Account.
+Retorno de Valores: Devuelve un booleano indicando el éxito, el nombre completo del proveedor WIF, el email de la SA y el ID del proyecto. Estos valores son utilizados por el script orquestador para configurar los secretos en GitHub.
+Variables de Entorno Clave (leídas de service/.env):
+
+GOOGLE_CLOUD_PROJECT_ID: ID del proyecto GCP.
+APP_SA_NAME: Nombre corto de la Service Account de la aplicación.
+WORKLOAD_IDENTITY_POOL_ID_FINAL: ID del Workload Identity Pool (previamente determinado, ej. por tf_plan.py y usado por Terraform).
+WIF_PROVIDER_ID: ID del proveedor de identidad dentro del WIF Pool (ej. "github-provider", también usado por Terraform).
+GITHUB_REPO_OWNER: Propietario del repositorio de GitHub.
+GITHUB_REPO_NAME: Nombre del repositorio de GitHub.
+Dependencias:
+
+Python dotenv.
+Google Cloud Client Libraries para Python: google-cloud-iam-admin, google-cloud-resourcemanager.
+Módulos internos: tools.scripts.utils_general y tools.scripts.f04_gcp_setup.utils_gcp.
+CLI de gcloud (para la configuración de ADC).
+Uso (si se ejecuta directamente): El bloque if __name__ == "__main__": permite ejecutar el script. Configura sys.path y llama a main(). El script está diseñado principalmente para ser llamado por un orquestador, ya que su función main() devuelve valores que son consumidos por otros scripts (como s04_set_github_secrets.py). Sale con código 1 si la configuración falla.
+
+Entradas:
+
+Archivo service/.env con todas las variables de entorno requeridas.
+Una Service Account, un Workload Identity Pool y un proveedor WIF dentro de ese pool ya deben existir en GCP (generalmente creados por Terraform).
+Salidas y Efectos Secundarios:
+
+Modifica la política IAM de la Service Account especificada en GCP.
+Imprime mensajes de estado y logs detallados en la consola.
+La función main() devuelve una tupla: (success_status, wif_provider_name, sa_email, project_id).
+Mejores Prácticas y Consideraciones:
+
+Principio de Mínimo Privilegio: El PrincipalSet se configura para un repositorio específico. Se podría restringir aún más a ramas o tags específicos si fuera necesario, modificando la construcción del principal_set.
+Permisos del Ejecutor: El usuario o la SA que ejecuta este script debe tener permisos para obtener y establecer políticas IAM en Service Accounts (ej. roles/iam.serviceAccountAdmin sobre la SA objetivo, o roles/iam.securityAdmin a nivel de proyecto). También necesita permisos para obtener información del proyecto (ej. roles/resourcemanager.projectIamAdmin o roles/browser).
+Idempotencia: El script está diseñado para ser idempotente; verifica los bindings existentes y solo realiza cambios si son necesarios.
+Infraestructura Preexistente: Este script asume que el Workload Identity Pool y el proveedor ya han sido creados (generalmente por Terraform). Este script solo configura el binding entre la SA y el proveedor WIF.
+Orquestación: Este script es una pieza clave en la configuración post-Terraform y es llamado por s00_main_gcp_config.py. Los valores que devuelve son esenciales para el siguiente paso de configuración de secretos en GitHub.
+'''

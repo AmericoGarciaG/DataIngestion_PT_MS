@@ -160,3 +160,54 @@ if __name__ == "__main__":
     
     if not main():
         sys.exit(1)
+
+'''
+seed_firestore.py
+Propósito: Puebla la base de datos Google Cloud Firestore con datos iniciales o "semilla" (seed data). Esto es útil para configurar la aplicación con entidades básicas necesarias para su funcionamiento, como proveedores de datos o activos de ejemplo.
+
+Funcionamiento Principal:
+
+Carga de Entorno: Lee variables de service/.env, como GOOGLE_CLOUD_PROJECT_ID, ALPACA_ASSET_SYMBOL, y ALPACA_PAPER_MODE.
+Inicialización de Cliente Firestore: Crea un cliente de Firestore para el proyecto GCP especificado.
+Gestión de Proveedor Alpaca:
+Define la ruta y el ID del documento para el proveedor "alpaca" (ej. data/providers/items/alpaca).
+Verifica si el documento del proveedor ya existe.
+Si no existe, lo crea con datos como el nombre, identificador, URL base de la API (determinada por ALPACA_PAPER_MODE), y timestamps.
+Gestión de Activo de Ejemplo:
+Obtiene el símbolo del activo de ALPACA_ASSET_SYMBOL desde .env.
+Si el símbolo está definido:
+Construye un ID de documento único para el activo (ej. alpaca_SPY).
+Define la ruta para el activo (ej. data/assets/symbols/{provider_id}_{SYMBOL}).
+Crea el documento contenedor data/assets si no existe.
+Verifica si el documento del activo específico ya existe.
+Si no existe, lo crea con datos como el símbolo, ID del proveedor, nombre, clase de activo, etc.
+Variables de Entorno Clave (leídas de service/.env):
+
+GOOGLE_CLOUD_PROJECT_ID: ID del proyecto GCP donde se encuentra Firestore.
+ALPACA_ASSET_SYMBOL: Símbolo del activo de ejemplo a crear (ej. "SPY").
+ALPACA_PAPER_MODE: Booleano ("true" o "false") para determinar la URL de la API de Alpaca.
+Constantes Importantes (Nombres de Colecciones/Documentos):
+
+ROOT_COLLECTION, FIRESTORE_PROVIDERS_COLLECTION, FIRESTORE_ASSETS_DOCUMENT, FIRESTORE_SYMBOLS_COLLECTION.
+Dependencias:
+
+Python dotenv.
+Google Cloud Client Library para Python: google-cloud-firestore.
+Módulo interno: tools.scripts.utils_general.
+CLI de gcloud (para ADC, necesaria para el cliente Firestore).
+Uso (si se ejecuta directamente): Configura sys.path y llama a main(). Sale con código 1 en caso de error.
+
+Entradas:
+
+Archivo service/.env con las variables de configuración.
+Salidas y Efectos Secundarios:
+
+Crea o actualiza documentos en la base de datos Firestore.
+Imprime mensajes de estado y logs.
+Mejores Prácticas y Consideraciones:
+
+Permisos del Ejecutor: El usuario o SA que ejecuta el script necesita permisos de escritura en Firestore (ej. roles/datastore.user).
+Idempotencia: El script está diseñado para ser idempotente; si los datos ya existen, no los duplicará, sino que los omitirá.
+Consistencia de Datos: La estructura de datos (nombres de colecciones y documentos, campos) utilizada en este script debe ser consistente con la que espera la aplicación principal.
+Datos de Ejemplo: Los datos "semilla" deben ser representativos y útiles para el desarrollo o pruebas iniciales.
+'''

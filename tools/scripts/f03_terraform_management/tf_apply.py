@@ -95,3 +95,44 @@ if __name__ == "__main__":
     if str(project_root_dir_for_import) not in sys.path:
         sys.path.insert(0, str(project_root_dir_for_import))
     main()
+
+'''
+tf_apply.py
+Propósito: Aplica un plan de Terraform previamente generado y guardado (normalmente tfplan.out). Este script es el paso final para materializar los cambios de infraestructura definidos en la configuración de Terraform y validados en el plan.
+
+Funcionamiento Principal:
+
+Carga de Entorno: Carga el archivo service/.env. Esto se hace principalmente para propósitos de logging y para que el usuario confirme el proyecto sobre el cual se aplicarán los cambios.
+Verificación del Plan: Comprueba si el archivo de plan (terraform/tfplan.out) existe. Si no, indica que se debe ejecutar tf_plan.py primero.
+Confirmación del Usuario: Muestra el ID del proyecto (obtenido de .env) y el nombre del archivo de plan, y solicita una confirmación explícita del usuario (escribiendo "yes") antes de proceder con la aplicación.
+Ejecución de terraform apply:
+Construye el comando terraform apply tfplan.out (o terraform apply -auto-approve tfplan.out si se descomenta esa opción).
+Ejecuta el comando en el directorio terraform/ utilizando utils_general.run_command_in_dir.
+Variables de Entorno Clave (leídas de service/.env para logging/confirmación):
+
+GOOGLE_CLOUD_PROJECT_ID
+WORKLOAD_IDENTITY_POOL_ID_FINAL
+WIF_PROVIDER_ID (Nota: Terraform utiliza los valores que están "cocinados" dentro del archivo tfplan.out para la aplicación, no los lee directamente de .env en este punto).
+Dependencias:
+
+CLI de terraform.
+Módulo interno: tools.scripts.utils_general.
+Uso (si se ejecuta directamente): Configura sys.path y llama a main().
+
+Entradas:
+
+Archivo de plan de Terraform: terraform/tfplan.out (generado por tf_plan.py).
+Archivo service/.env (para confirmación del proyecto y logging).
+Salidas y Efectos Secundarios:
+
+Modifica la infraestructura en Google Cloud Platform de acuerdo con el plan de Terraform.
+Imprime la salida del comando terraform apply en la consola.
+Opcionalmente (si se descomenta), puede eliminar el archivo de plan tfplan.out después de una aplicación exitosa.
+Mejores Prácticas y Consideraciones:
+
+Revisión del Plan Obligatoria: Siempre se debe ejecutar tf_plan.py y revisar cuidadosamente el plan generado antes de ejecutar tf_apply.py.
+Instalación de Terraform: Asegurarse de que la CLI de Terraform esté instalada.
+Permisos: El usuario o el entorno donde se ejecuta Terraform (si es en CI/CD) debe tener los permisos necesarios en GCP para crear, modificar o eliminar los recursos definidos en la configuración de Terraform.
+Confirmación Manual: La solicitud de confirmación manual es una medida de seguridad importante para evitar cambios accidentales en la infraestructura. Para entornos de CI/CD, se podría usar la opción -auto-approve.
+Gestión del Estado: Asegurarse de que el backend de estado de Terraform esté correctamente configurado y accesible.
+'''

@@ -52,3 +52,40 @@ if __name__ == "__main__":
     if str(project_root_dir_for_import) not in sys.path:
         sys.path.insert(0, str(project_root_dir_for_import))
     main()
+
+'''
+tf_init_validate.py
+Propósito: Prepara el directorio de trabajo de Terraform. Primero, inicializa el directorio (terraform init), lo que descarga los proveedores necesarios y configura el backend de estado. Luego, valida la sintaxis y la coherencia de los archivos de configuración de Terraform (terraform validate).
+
+Funcionamiento Principal:
+
+Identificación del Directorio: Determina la ruta al directorio terraform/ dentro del proyecto.
+Verificación de Archivos Esenciales: Comprueba la existencia de archivos clave de Terraform como main.tf, variables.tf, y versions.tf en el directorio terraform/. Si falta alguno, el script termina con un error.
+Ejecución de terraform init:
+Ejecuta el comando terraform init en el directorio terraform/ utilizando utils_general.run_command_in_dir.
+Este comando prepara el directorio para otras operaciones de Terraform.
+Ejecución de terraform validate:
+Ejecuta el comando terraform validate en el directorio terraform/ utilizando utils_general.run_command_in_dir.
+Este comando verifica que la configuración sea sintácticamente correcta y lógicamente consistente.
+Dependencias:
+
+CLI de terraform.
+Módulo interno: tools.scripts.utils_general.
+Uso (si se ejecuta directamente): Configura sys.path y llama a main().
+
+Entradas:
+
+Archivos de configuración de Terraform (*.tf) ubicados en el directorio terraform/.
+Salidas y Efectos Secundarios:
+
+Si terraform init se ejecuta por primera vez o hay cambios en proveedores/backend:
+Crea o actualiza el subdirectorio .terraform/ con los plugins de los proveedores y la configuración del backend.
+Puede interactuar con el backend de estado remoto si está configurado.
+Imprime la salida de los comandos terraform init y terraform validate en la consola.
+Mejores Prácticas y Consideraciones:
+
+Primer Paso con Terraform: Este script (o los comandos que ejecuta) debe ser el primer paso al trabajar con una nueva configuración de Terraform o después de realizar cambios en las versiones de los proveedores o en la configuración del backend.
+Instalación de Terraform: Asegurarse de que la CLI de Terraform esté instalada y accesible en el PATH.
+Errores de Validación: Si terraform validate reporta errores, estos deben corregirse en los archivos .tf antes de proceder con plan o apply.
+Backend de Estado: Prestar atención a la configuración del backend de estado en los archivos de Terraform, ya que init lo configurará.
+'''

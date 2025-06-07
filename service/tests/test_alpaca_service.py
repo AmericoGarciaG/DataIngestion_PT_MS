@@ -55,3 +55,60 @@ if __name__ == "__main__":
     if sys.platform == "win32" and sys.version_info >= (3, 8):
         asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
     asyncio.run(test_fetch_service_logic())
+
+
+'''
+test_alpaca_service.py
+Propósito: Este archivo contiene pruebas para el módulo service.app.alpaca_service. La prueba principal proporcionada, test_fetch_service_logic, funciona más como una prueba de integración que como una prueba unitaria pura, ya que (en su forma actual) interactúa con servicios externos como Alpaca y Firestore.
+
+Funcionamiento Principal:
+
+Configuración de sys.path: Añade el directorio raíz del proyecto a sys.path para permitir importaciones absolutas de los módulos del servicio (ej. from service.app.alpaca_service import ...).
+Función de Prueba test_fetch_service_logic() (asíncrona):
+Imprime un mensaje de inicio.
+Llamada al Servicio: Ejecuta la función fetch_historical_bars_from_alpaca() del módulo alpaca_service.
+Aserciones y Verificaciones:
+Comprueba el diccionario global last_fetch_status (del módulo alpaca_service) después de la ejecución.
+Verifica que last_attempt_timestamp_utc no sea nulo.
+Si hay un mensaje de error en last_fetch_status, lo registra como una advertencia.
+Si no hay error, verifica que last_success_timestamp_utc no sea nulo y que assets_processed_count sea mayor que cero.
+Imprime un resumen del estado final de last_fetch_status.
+Bloque if __name__ == "__main__"::
+Permite ejecutar la prueba directamente.
+Incluye una política de bucle de eventos específica para Windows (WindowsSelectorEventLoopPolicy) si se ejecuta en Python 3.8+ en Windows, para evitar problemas comunes con asyncio.run().
+Ejecuta test_fetch_service_logic() usando asyncio.run().
+Dependencias:
+
+asyncio (módulo estándar).
+logging (módulo estándar).
+unittest.mock (mencionado en comentarios para mocking, aunque no usado activamente en el código proporcionado).
+El módulo bajo prueba: service.app.alpaca_service.
+Implícitamente, pytest si las pruebas se ejecutan a través del runner de pytest (aunque no se importa directamente para la ejecución individual).
+Entradas:
+
+Si no se utilizan mocks, la prueba depende de la misma configuración que alpaca_service.py:
+Archivo service/.env con credenciales de Alpaca, configuración de GCP, etc.
+Conectividad a la API de Alpaca.
+Conectividad y permisos para Firestore y Pub/Sub en GCP.
+Datos "semilla" en Firestore (lista de activos a procesar).
+Salidas y Efectos Secundarios:
+
+Imprime logs y mensajes de estado de la prueba en la consola.
+Si se ejecuta contra servicios reales:
+Realiza llamadas a la API de Alpaca.
+Lee y escribe datos en Firestore.
+Publica mensajes en Pub/Sub.
+Las aserciones determinarán si la prueba pasa o falla.
+Mejores Prácticas y Consideraciones:
+
+Pruebas Unitarias vs. Integración: Como se menciona en los comentarios del código, para pruebas unitarias verdaderas, las dependencias externas (API de Alpaca, Firestore, Pub/Sub) deberían ser "mockeadas" (simuladas). Esto aísla la lógica del módulo bajo prueba y hace las pruebas más rápidas y deterministas.
+Cobertura de Pruebas: Idealmente, se deberían tener pruebas para diferentes escenarios, incluyendo:
+Casos de éxito.
+Errores de API (Alpaca no disponible, credenciales incorrectas).
+Errores de base de datos (Firestore no accesible).
+Datos inesperados o malformados de la API.
+Casos límite (sin activos para procesar, etc.).
+Entorno de Prueba: Para pruebas de integración, es común usar un entorno de prueba dedicado (proyecto GCP de prueba, cuenta de paper trading de Alpaca) para evitar afectar datos de producción.
+Aserciones Claras: Las aserciones deben ser específicas y verificar los resultados esperados de la función bajo prueba.
+Limpieza: Si las pruebas crean datos temporales, deberían limpiarlos después de la ejecución (especialmente relevante para pruebas de integración).
+'''

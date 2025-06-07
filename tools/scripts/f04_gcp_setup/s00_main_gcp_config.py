@@ -80,3 +80,47 @@ if __name__ == "__main__":
     
     if not main():
         sys.exit(1)
+
+'''
+s00_main_gcp_config.py
+Propósito: Actúa como un script orquestador principal para ejecutar una secuencia de tareas de configuración en GCP y GitHub. Está diseñado para ser ejecutado después de que la infraestructura base haya sido aprovisionada (generalmente mediante terraform apply).
+
+Funcionamiento Principal:
+
+Confirmación del Usuario: Si no se ejecuta en un entorno de CI (variable de entorno CI no definida), solicita al usuario que presione Enter para continuar, advirtiendo sobre las acciones que realizará.
+Ejecución Secuencial de Scripts: Llama a las funciones main() de varios scripts de configuración en un orden específico:
+s01_configure_sa_permissions.main(): Configura permisos para la SA de la aplicación.
+s02_manage_secrets.main(): Gestiona versiones de secretos en Secret Manager.
+s03_configure_workload_identity.main(): Configura el binding de Workload Identity Federation para la SA. Captura los valores devueltos (ID del proveedor WIF, email de la SA, ID del proyecto).
+s04_set_github_secrets.main(): Utiliza los valores del paso anterior para configurar secretos en el repositorio de GitHub.
+s05_set_github_variables.main(): Configura variables (no secretas) en el repositorio de GitHub.
+seed_firestore.main(): Puebla Firestore con datos iniciales.
+Manejo de Errores: Si alguno de los scripts llamados devuelve False (indicando un error), el script orquestador termina e informa del fallo.
+Dependencias:
+
+Módulos internos importados:
+tools.scripts.f04_gcp_setup.s01_configure_sa_permissions
+tools.scripts.f04_gcp_setup.s02_manage_secrets
+tools.scripts.f04_gcp_setup.s03_configure_workload_identity
+tools.scripts.f04_gcp_setup.s04_set_github_secrets
+tools.scripts.f04_gcp_setup.s05_set_github_variables
+tools.scripts.f05_data.seed_firestore
+Implícitamente, depende de las herramientas y configuraciones que estos sub-scripts requieren (ej. gcloud ADC, gh CLI autenticada, archivo service/.env).
+Uso (si se ejecuta directamente): Configura sys.path y llama a main(). Sale con código 1 si alguna de las tareas de configuración falla.
+
+Entradas:
+
+Indirectamente, el archivo service/.env (utilizado por los sub-scripts).
+Autenticación con la CLI de gh (para los scripts que configuran secretos/variables de GitHub).
+Credenciales ADC de gcloud (para los scripts que interactúan con GCP).
+Salidas y Efectos Secundarios:
+
+Agrega los efectos secundarios de todos los scripts que invoca (modificaciones en IAM de GCP, Secret Manager, Workload Identity, secretos/variables de GitHub, datos en Firestore).
+Imprime mensajes de estado y logs detallados de cada paso.
+Mejores Prácticas y Consideraciones:
+
+Orden de Ejecución: Ejecutar este script después de que terraform apply haya completado exitosamente el aprovisionamiento de la infraestructura base.
+Autenticación Previa: Asegurarse de que la CLI de gh esté instalada y autenticada (ej. con gh auth login) antes de ejecutar este script si se van a configurar secretos/variables de GitHub.
+Credenciales ADC: Asegurarse de que las Credenciales Predeterminadas de Aplicación (gcloud auth application-default login) estén configuradas y tengan los permisos necesarios para todas las operaciones de GCP que realizan los sub-scripts.
+Revisión de Sub-Scripts: Comprender lo que hace cada sub-script es importante antes de ejecutar este orquestador.
+'''

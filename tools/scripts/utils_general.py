@@ -169,3 +169,61 @@ def find_available_resource_suffix(base_name: str, start_suffix_int: int, max_at
 
     print(f"{SCRIPT_PREFIX_UTILS_GENERAL}ERROR: No se pudo encontrar sufijo disponible para '{base_name}' tras {max_attempts} intentos.")
     return None
+
+
+'''
+utils_general.py
+Propósito: Este módulo proporciona un conjunto de funciones de utilidad de propósito general, diseñadas para ser reutilizadas por diversos scripts dentro del directorio tools/scripts/. Estas utilidades no son específicas de una tecnología o proveedor de nube en particular, sino que ofrecen funcionalidades comunes como la ejecución de comandos del sistema, manipulación de rutas, obtención de entrada del usuario y búsqueda de recursos.
+
+Funciones Principales:
+
+get_project_root() -> pathlib.Path:
+Determina y devuelve la ruta raíz del proyecto. Asume una estructura de directorios específica donde este script (utils_general.py) se encuentra en PROJECT_ROOT/tools/scripts/.
+run_command_in_dir(command_list, working_directory, ...):
+Ejecuta un comando del sistema en un directorio de trabajo específico.
+Maneja la resolución de la ruta del ejecutable (ej. gcloud.cmd en Windows, gcloud en Linux).
+Permite pasar variables de entorno adicionales al comando.
+Ofrece opciones para capturar la salida (stdout/stderr) o pasarla directamente a la consola del script.
+Maneja errores de ejecución y puede terminar el script si se especifica (exit_on_error).
+get_gcloud_project_config() -> str | None:
+Obtiene el ID del proyecto Google Cloud Platform (GCP) que está actualmente configurado como predeterminado en la CLI local de gcloud.
+get_input(prompt_message, default_value=None, validator_regex=None, ...):
+Solicita entrada al usuario a través de la consola.
+Soporta un valor predeterminado si el usuario no ingresa nada.
+Permite la validación de la entrada mediante una expresión regular.
+_check_wif_pool_exists_in_gcp(pool_id_to_check: str, gcp_project_id: str) -> bool:
+(Específica de GCP, pero utilizada por tf_plan.py) Verifica si un Workload Identity Pool (WIF Pool) con un ID dado existe en un proyecto GCP específico. Utiliza la CLI de gcloud.
+Devuelve True si el pool existe, False si no, o True en caso de error para evitar bucles infinitos en la función que lo llama.
+find_available_resource_suffix(base_name: str, start_suffix_int: int, ...):
+Busca un sufijo numérico disponible para un nombre de recurso base.
+Incrementa un contador numérico y formatea el sufijo (ej. con ceros a la izquierda).
+Llama a una función check_existence_func proporcionada para verificar si el nombre completo del recurso (base + sufijo) ya existe.
+Devuelve el primer sufijo formateado que resulta en un nombre de recurso no existente, o None si se agotan los intentos.
+Dependencias:
+
+Módulos estándar de Python: os, subprocess, sys, pathlib, re, shutil, time, json.
+Uso: Este módulo no está diseñado para ser ejecutado directamente. Sus funciones son importadas y utilizadas por otros scripts de herramientas.
+
+python
+# Ejemplo de uso en otro script:
+# from tools.scripts import utils_general as ug
+#
+# project_dir = ug.get_project_root()
+# ug.run_command_in_dir(["echo", "Hola desde utils"], project_dir)
+# user_name = ug.get_input("Ingresa tu nombre", default_value="Invitado")
+Entradas (para las funciones):
+
+Argumentos específicos de cada función.
+Salidas (de las funciones):
+
+Varían según la función: pueden ser rutas (pathlib.Path), booleanos (éxito/fracaso de un comando), cadenas de texto (entrada del usuario, sufijos), o None.
+Imprimen mensajes de log, la salida de los comandos ejecutados, y prompts para el usuario en la consola.
+Mejores Prácticas y Consideraciones:
+
+Abstracción y Reusabilidad: Estas utilidades abstraen tareas comunes, haciendo los scripts que las usan más limpios y fáciles de mantener.
+Manejo de Plataformas: La función run_command_in_dir intenta manejar diferencias entre plataformas (Windows vs. Linux/macOS) en la ejecución de comandos y la resolución de ejecutables.
+Manejo de Errores: run_command_in_dir incluye un manejo robusto de errores para la ejecución de comandos.
+Claridad en los Logs: El prefijo SCRIPT_PREFIX_UTILS_GENERAL ayuda a identificar los mensajes de log provenientes de este módulo.
+Colocación de Funciones Específicas: La función _check_wif_pool_exists_in_gcp es específica de GCP. Aunque está aquí porque find_available_resource_suffix es genérica y necesita una función de chequeo, podría considerarse moverla a utils_gcp.py si se refactoriza la dependencia.
+Seguridad en run_command_in_dir: Siempre tener cuidado al construir comandos dinámicamente para evitar vulnerabilidades de inyección de comandos, aunque en el uso actual con listas de argumentos esto es menos problemático que con shell=True y una cadena de comando completa.
+'''

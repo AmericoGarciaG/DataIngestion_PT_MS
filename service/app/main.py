@@ -187,3 +187,77 @@ if __name__ == "__main__":
     import uvicorn
     logger.info(f"Starting Uvicorn server on {settings.app_host}:{settings.app_port}")
     uvicorn.run("app.main:app", host=settings.app_host, port=settings.app_port, reload=False, access_log=True, log_level="info")
+
+
+'''
+main.py
+Propósito: Este es el archivo principal de la aplicación de servicio, construido con FastAPI. Define los endpoints de la API HTTP, maneja las conexiones WebSocket para la comunicación en tiempo real, y programa la tarea periódica de obtención de datos históricos de Alpaca.
+
+Funcionamiento Principal:
+
+Configuración de Logging y Scheduler:
+Configura logging básico.
+Crea una instancia de AsyncIOScheduler para programar tareas asíncronas.
+Contexto de Vida de la Aplicación (lifespan):
+Al Inicio (startup):
+Registra el inicio de la aplicación y la configuración del servidor.
+Realiza una llamada inicial a fetch_historical_bars_from_alpaca() para obtener datos inmediatamente al arrancar.
+Configura y añade un trabajo al scheduler para ejecutar fetch_historical_bars_from_alpaca periódicamente. El tipo de trigger (intervalo o cron) y sus parámetros se leen de settings.
+Inicia el scheduler.
+Al Cierre (shutdown):
+Registra el cierre de la aplicación.
+Detiene el scheduler.
+Instancia de FastAPI:
+Crea la instancia app = FastAPI(lifespan=lifespan).
+Endpoints HTTP API:
+GET /_health: Endpoint de verificación de salud simple, devuelve estado "healthy" y timestamp.
+GET /: Endpoint raíz, devuelve un mensaje de bienvenida, información del servicio (puerto, timeframe, configuración del schedule) y un resumen del último estado de obtención de datos (last_fetch_status, excluyendo el detalle de las barras para brevedad).
+Gestión de Conexiones WebSocket (ConnectionManager):
+Clase para administrar las conexiones WebSocket activas.
+active_connections: Un diccionario que mapea objetos WebSocket a un conjunto de símbolos a los que el cliente está suscrito.
+connect(websocket): Acepta una nueva conexión y la añade, inicialmente sin suscripciones.
+disconnect(websocket): Elimina una conexión.
+update_subscription(websocket, symbols): Actualiza el conjunto de símbolos para una conexión específica.
+broadcast_data(data): Envía datos a todos los clientes conectados. Si un cliente tiene suscripciones activas, filtra los datos de data["bars"] para enviar solo los símbolos suscritos. Si no tiene suscripciones, envía todos los datos.
+Instancia del Gestor: manager = ConnectionManager().
+Endpoint WebSocket (/ws):
+websocket_endpoint(websocket: WebSocket):
+Llama a manager.connect() para registrar la nueva conexión.
+Envía inmediatamente el estado actual (last_fetch_status) al cliente recién conectado (sin filtrar, ya que aún no hay suscripción).
+Entra en un bucle para recibir mensajes del cliente:
+Espera mensajes de texto del cliente.
+Intenta parsear el mensaje como JSON.
+Si el mensaje tiene action: "subscribe" y una lista de symbols, llama a manager.update_subscription() y reenvía los datos (ahora filtrados según la nueva suscripción).
+Maneja WebSocketDisconnect y otros errores, asegurando llamar a manager.disconnect() en la cláusula finally.
+Bloque if __name__ == "__main__"::
+Permite ejecutar la aplicación directamente usando Uvicorn.
+Lee settings.app_host y settings.app_port para la configuración del servidor.
+Dependencias:
+
+fastapi
+uvicorn (para ejecutar el servidor ASGI)
+apscheduler (para la programación de tareas)
+Módulos internos: service.app.alpaca_service (para fetch_historical_bars_from_alpaca y last_fetch_status), service.app.config (para settings).
+asyncio, datetime, json, logging (módulos estándar).
+Entradas:
+
+Configuración de settings (host, puerto, parámetros del planificador, etc.).
+Solicitudes HTTP a los endpoints definidos.
+Conexiones y mensajes de clientes WebSocket.
+Salidas y Efectos Secundarios:
+
+Ejecuta un servidor web ASGI que responde a solicitudes HTTP y maneja conexiones WebSocket.
+Ejecuta periódicamente la tarea de obtención de datos de Alpaca.
+Envía datos y actualizaciones a los clientes WebSocket conectados.
+Registra eventos de la aplicación, solicitudes, conexiones y errores.
+Mejores Prácticas y Consideraciones:
+
+Gestión del Ciclo de Vida (lifespan): Usar lifespan es la forma recomendada en FastAPI para manejar tareas de inicio y cierre, como la inicialización y detención de schedulers.
+Programación de Tareas Asíncronas: AsyncIOScheduler es adecuado para un entorno asyncio como el de FastAPI.
+Gestión de Conexiones WebSocket: La clase ConnectionManager encapsula bien la lógica de manejo de múltiples clientes WebSocket.
+Suscripciones WebSocket: Implementar un sistema de suscripción permite a los clientes recibir solo los datos que les interesan, lo que es más eficiente que transmitir todo a todos.
+Manejo de Errores en WebSockets: Es importante manejar desconexiones y errores de comunicación en el endpoint WebSocket para evitar que una conexión fallida afecte al servidor.
+Seguridad: Para aplicaciones en producción, se deben considerar aspectos de seguridad como la autenticación/autorización para los endpoints HTTP y WebSocket, y la configuración de CORS si es necesario.
+Escalabilidad: Para un gran número de conexiones WebSocket, se podrían necesitar soluciones más avanzadas de gestión de conexiones o balanceo de carga.
+
+'''

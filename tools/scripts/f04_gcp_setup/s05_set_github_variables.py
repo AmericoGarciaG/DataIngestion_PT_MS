@@ -106,3 +106,50 @@ if __name__ == "__main__":
 
     if not main():
         sys.exit(1)
+
+
+'''
+s05_set_github_variables.py
+Propósito: Configura variables de entorno (no secretas) en un repositorio de GitHub. Estas variables son típicamente utilizadas por los workflows de CI/CD (GitHub Actions). El script lee un mapeo de nombres de variables de GitHub a nombres de variables en el archivo service/.env y utiliza la CLI de GitHub (gh) para establecerlas.
+
+Funcionamiento Principal:
+
+Carga de Entorno: Carga el archivo service/.env.
+Obtención de Detalles del Repositorio: Lee GITHUB_REPO_OWNER y GITHUB_REPO_NAME de .env para identificar el repositorio objetivo.
+Iteración sobre el Mapeo de Variables:
+Utiliza un diccionario variables_map que define la correspondencia: {"NOMBRE_EN_GITHUB": "NOMBRE_EN_DOTENV"}.
+Para cada entrada en el mapa:
+Obtiene el valor de la variable del entorno (cargado desde .env).
+Si el valor no se encuentra en .env, omite la configuración de esa variable en GitHub y muestra una advertencia.
+Construye y ejecuta el comando gh variable set <NOMBRE_EN_GITHUB> --body "<VALOR>" --repo <OWNER/REPO> utilizando utils_general.run_command_in_dir (aunque en la versión proporcionada, usa subprocess.run directamente).
+Manejo de Errores: Registra si la configuración de alguna variable falla.
+Variables de Entorno Clave (leídas de service/.env):
+
+GITHUB_REPO_OWNER: Propietario del repositorio de GitHub.
+GITHUB_REPO_NAME: Nombre del repositorio de GitHub.
+Todas las variables listadas como valores en el diccionario variables_map (ej. GCP_REGION, CLOUD_RUN_SERVICE_NAME, etc.).
+Constantes Importantes:
+
+variables_map: Diccionario que define qué variables de .env se deben configurar en GitHub y con qué nombre.
+Dependencias:
+
+CLI de gh (GitHub).
+Python dotenv.
+Módulo interno: tools.scripts.utils_general.
+Uso (si se ejecuta directamente): Configura sys.path y llama a main(). Sale con código 1 si la configuración de alguna variable falla.
+
+Entradas:
+
+Archivo service/.env conteniendo los valores de las variables a configurar.
+Autenticación con la CLI de gh.
+Salidas y Efectos Secundarios:
+
+Crea o actualiza variables en el repositorio de GitHub especificado.
+Imprime mensajes de estado y logs, incluyendo la salida de la CLI gh.
+Mejores Prácticas y Consideraciones:
+
+Autenticación de gh: Asegurarse de que la CLI de gh esté instalada y autenticada (gh auth login) con permisos para establecer variables en el repositorio objetivo.
+Variables No Secretas: Utilizar este script únicamente para variables de configuración que no sean sensibles. Para información sensible, usar el script s04_set_github_secrets.py.
+Flexibilidad del Mapeo: El variables_map permite que los nombres de las variables en .env difieran de los nombres utilizados en los workflows de GitHub, lo cual es una buena práctica para desacoplar.
+Idempotencia: El comando gh variable set es idempotente; si la variable ya existe con el mismo valor, no causa error. Si existe con un valor diferente, la actualiza.
+'''

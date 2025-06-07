@@ -125,3 +125,48 @@ if __name__ == "__main__":
     
     if not main():
         sys.exit(1)
+
+'''
+s01_configure_sa_permissions.py
+Propósito: Este script se encarga de configurar los permisos IAM (Identity and Access Management) necesarios para la Cuenta de Servicio (Service Account - SA) principal de la aplicación a nivel de proyecto en Google Cloud Platform (GCP). Asigna una lista predefinida de roles a la SA especificada en el archivo de entorno.
+
+Funcionamiento Principal:
+
+Carga de Entorno: Lee variables del archivo service/.env, específicamente GOOGLE_CLOUD_PROJECT_ID y APP_SA_NAME.
+Verificación de Credenciales: Comprueba las Credenciales Predeterminadas de Aplicación (Application Default Credentials - ADC) para autenticarse con GCP.
+Construcción del Email de SA: Utiliza utils_gcp.get_service_account_email para obtener el email completo de la SA.
+Obtención de Política IAM: Recupera la política IAM actual del proyecto GCP.
+Iteración y Asignación de Roles:
+Para cada rol definido en la constante SA_PROJECT_ROLES_TO_ASSIGN:
+Verifica si la SA ya es miembro de ese rol.
+Si no lo es, añade la SA al binding del rol. Si el binding para el rol no existe, lo crea.
+Aplicación de Cambios: Si se realizaron modificaciones en la política, actualiza la política IAM del proyecto.
+Variables de Entorno Clave (leídas de service/.env):
+
+GOOGLE_CLOUD_PROJECT_ID: ID del proyecto GCP donde se configurarán los permisos.
+APP_SA_NAME: Nombre corto de la Cuenta de Servicio (sin el @<project-id>.iam.gserviceaccount.com).
+Constantes Importantes:
+
+SA_PROJECT_ROLES_TO_ASSIGN: Lista de strings que define los roles que se asignarán a la SA en el proyecto (ej. roles/datastore.user, roles/pubsub.publisher).
+Dependencias:
+
+Python dotenv para cargar variables de entorno.
+Google Cloud Client Library para Python: google-cloud-resourcemanager.
+Módulos internos: tools.scripts.utils_general y tools.scripts.f04_gcp_setup.utils_gcp.
+CLI de gcloud (para la configuración de ADC).
+Uso (si se ejecuta directamente): El bloque if __name__ == "__main__": permite ejecutar el script de forma independiente. Modifica sys.path para asegurar importaciones correctas y llama a la función main(). Termina con código de salida 1 si la configuración falla.
+
+Entradas:
+
+Archivo service/.env con las variables de entorno requeridas.
+Salidas y Efectos Secundarios:
+
+Modifica la política IAM del proyecto GCP especificado.
+Imprime mensajes de estado y logs en la consola.
+Mejores Prácticas y Consideraciones:
+
+Principio de Mínimo Privilegio: La lista SA_PROJECT_ROLES_TO_ASSIGN debe contener únicamente los roles estrictamente necesarios para el funcionamiento de la aplicación. Revisar esta lista cuidadosamente.
+Permisos del Ejecutor: El usuario o la SA que ejecuta este script debe tener los permisos resourcemanager.projects.getIamPolicy y resourcemanager.projects.setIamPolicy sobre el proyecto GCP.
+Idempotencia: El script está diseñado para ser idempotente; verifica los bindings existentes y solo realiza cambios si son necesarios.
+Orquestación: Este script suele ser llamado por un script orquestador principal (como s00_main_gcp_config.py) después de que la infraestructura base (incluida la SA) haya sido creada (ej. por Terraform).
+'''

@@ -154,3 +154,53 @@ if __name__ == "__main__":
     if str(project_root_dir_for_import) not in sys.path:
         sys.path.insert(0, str(project_root_dir_for_import))
     main()
+
+
+'''
+tf_plan-py
+Propósito: Genera un plan de ejecución de Terraform (terraform plan). Este script automatiza parte del proceso, incluyendo la determinación dinámica de un sufijo único para el ID del Workload Identity Pool (WIF Pool) de GCP, guardando este ID en el archivo .env, y luego ejecutando terraform plan con las variables necesarias obtenidas del .env.
+
+Funcionamiento Principal:
+
+Carga de Entorno: Carga el archivo service/.env.
+Determinación del ID del WIF Pool:
+Lee WIF_POOL_BASE_NAME y WIF_POOL_START_SUFFIX de .env.
+Utiliza utils_general.find_available_resource_suffix (que a su vez usa utils_general._check_wif_pool_exists_in_gcp) para encontrar un sufijo numérico que, añadido al nombre base, resulte en un ID de WIF Pool que no exista aún en GCP.
+Construye el final_workload_identity_pool_id.
+Actualización de .env: Guarda o actualiza la variable WORKLOAD_IDENTITY_POOL_ID_FINAL en service/.env con el ID determinado. Terraform leerá esta variable.
+Recopilación de Variables Terraform: Lee otras variables necesarias para Terraform desde .env (ej. gcp_project_id, gcp_region, app_sa_name).
+Ejecución de terraform plan:
+Construye la lista de argumentos -var="nombre=valor" para Terraform.
+Ejecuta el comando terraform plan -out=tfplan.out en el directorio terraform/, pasando las variables.
+Utiliza utils_general.run_command_in_dir para la ejecución.
+Variables de Entorno Clave (leídas de service/.env):
+
+GOOGLE_CLOUD_PROJECT_ID
+WIF_POOL_BASE_NAME
+WIF_POOL_START_SUFFIX
+Otras variables que Terraform espera (definidas en variables.tf y mapeadas en el script), como GCP_REGION, APP_SA_NAME, WIF_PROVIDER_ID, GITHUB_REPO_OWNER, GITHUB_REPO_NAME, etc.
+Dependencias:
+
+CLI de terraform.
+CLI de gcloud (utilizada indirectamente por _check_wif_pool_exists_in_gcp).
+Python dotenv.
+Módulo interno: tools.scripts.utils_general.
+Uso (si se ejecuta directamente): Configura sys.path y llama a main().
+
+Entradas:
+
+Archivo service/.env.
+Archivos de configuración de Terraform (*.tf) ubicados en el directorio terraform/.
+Salidas y Efectos Secundarios:
+
+Modifica el archivo service/.env (actualiza o añade WORKLOAD_IDENTITY_POOL_ID_FINAL).
+Crea el archivo terraform/tfplan.out que contiene el plan de ejecución de Terraform.
+Imprime la salida del comando terraform plan en la consola.
+Mejores Prácticas y Consideraciones:
+
+Instalación de Terraform: Asegurarse de que la CLI de Terraform esté instalada y accesible en el PATH.
+Configuración de Terraform: El directorio terraform/ debe contener una configuración de Terraform válida y completa.
+Permisos: El usuario o SA que ejecuta el script (específicamente la parte que llama a gcloud para verificar WIF pools) necesita permisos para listar/describir WIF pools en GCP.
+Revisión del Plan: Es crucial revisar el archivo tfplan.out o la salida del comando terraform plan cuidadosamente antes de proceder a aplicar los cambios con tf_apply.py.
+Estado de Terraform: Este script no maneja terraform init. Se asume que el directorio de Terraform ya ha sido inicializado.
+'''

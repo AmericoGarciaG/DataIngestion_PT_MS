@@ -275,3 +275,62 @@ if __name__ == "__main__":
     if str(project_root_dir_for_import) not in sys.path:
         sys.path.insert(0, str(project_root_dir_for_import))
     main()
+
+'''
+f02_manage_gcp_environment.py
+Propósito: Gestiona el ciclo de vida de un proyecto de Google Cloud Platform (GCP). Puede verificar la autenticación con gcloud, comprobar la existencia de un proyecto GCP, crearlo si no existe, vincularlo a una cuenta de facturación, y configurar el proyecto como predeterminado en la CLI de gcloud local y para el proyecto de cuota de las Credenciales Predeterminadas de Aplicación (ADC).
+
+Funcionamiento Principal:
+
+check_gcloud_auth_status():
+Verifica si la CLI de gcloud está instalada.
+Comprueba si hay una cuenta activa autenticada en gcloud.
+Verifica si las ADC están configuradas (intentando obtener un token de acceso).
+verify_billing_account():
+Utiliza gcloud beta billing accounts describe para verificar si la cuenta de facturación especificada es accesible por el usuario autenticado.
+manage_project_lifecycle() (Lógica Principal):
+Llama a check_gcloud_auth_status().
+Carga service/.env para obtener GOOGLE_CLOUD_PROJECT_ID, GCP_BILLING_ACCOUNT_ID, y opcionalmente GCP_ORGANIZATION_ID o GCP_FOLDER_ID.
+Llama a verify_billing_account().
+Verificación/Creación del Proyecto:
+Utiliza gcloud projects describe para comprobar si el proyecto (GOOGLE_CLOUD_PROJECT_ID) ya existe.
+Si existe y está ACTIVE, procede. Si existe pero no está ACTIVE, termina con error.
+Si no existe, intenta crearlo con gcloud projects create, asociándolo opcionalmente a una organización o carpeta. Espera un tiempo para la propagación.
+Vinculación de Facturación:
+Si el proyecto se acaba de crear, o si existe pero la facturación no está habilitada, intenta vincularlo a la GCP_BILLING_ACCOUNT_ID usando gcloud beta billing projects link.
+Configuración Local de gcloud:
+Establece el proyecto como el predeterminado en la configuración local de la CLI de gcloud (gcloud config set project).
+Establece el proyecto como el proyecto de cuota para las ADC (gcloud auth application-default set-quota-project).
+main() (Orquestador del Script):
+Llama a manage_project_lifecycle() y maneja el resultado.
+Variables de Entorno Clave (leídas de service/.env):
+
+GOOGLE_CLOUD_PROJECT_ID (o ENV_VAR_PROJECT_ID internamente)
+GCP_BILLING_ACCOUNT_ID (o ENV_VAR_BILLING_ACCOUNT internamente)
+GCP_ORGANIZATION_ID (opcional, o ENV_VAR_ORGANIZATION_ID internamente)
+GCP_FOLDER_ID (opcional, o ENV_VAR_FOLDER_ID internamente)
+Dependencias:
+
+CLI de gcloud.
+Python dotenv, shutil.
+Módulo interno: tools.scripts.utils_general.
+Uso (si se ejecuta directamente): Configura sys.path y llama a main(). Sale con código 1 si el proceso falla.
+
+Entradas:
+
+Archivo service/.env con los IDs de proyecto, cuenta de facturación, etc.
+Autenticación activa en la CLI de gcloud.
+Salidas y Efectos Secundarios:
+
+Potencialmente crea un nuevo proyecto GCP.
+Vincula un proyecto a una cuenta de facturación.
+Modifica la configuración local de la CLI de gcloud (proyecto predeterminado, proyecto de cuota ADC).
+Imprime mensajes de estado y logs detallados.
+Mejores Prácticas y Consideraciones:
+
+Permisos Elevados: El usuario que ejecuta este script a través de gcloud debe tener permisos significativos en GCP, como resourcemanager.projectCreator, billing.user (o roles más específicos para vincular proyectos a cuentas de facturación), y permisos para modificar la configuración de la organización o carpeta si se usan esos parámetros.
+Autenticación gcloud: Es fundamental que gcloud auth login se haya ejecutado previamente y que la cuenta activa tenga los permisos necesarios.
+Unicidad del ID de Proyecto: Si se crea un nuevo proyecto, el GOOGLE_CLOUD_PROJECT_ID especificado en .env debe ser globalmente único.
+Impacto: Este script puede realizar cambios significativos (creación de proyectos, facturación). Usar con precaución y comprender sus acciones.
+Idempotencia Parcial: El script intenta ser idempotente (ej. no recrea un proyecto si ya existe y está activo), pero algunas operaciones como la configuración local de gcloud se ejecutarán siempre.
+'''

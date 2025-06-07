@@ -153,3 +153,51 @@ if __name__ == "__main__":
 
     if not main():
         sys.exit(1)
+
+'''
+s02_manage_secrets.py
+Propósito: Gestiona las versiones de los secretos almacenados en Google Secret Manager (GSM). El script compara los valores de secretos definidos en el archivo service/.env con la última versión activa en GSM. Si hay diferencias o no existe una versión activa, añade una nueva versión del secreto y deshabilita las versiones anteriores.
+
+Funcionamiento Principal:
+
+Carga de Entorno: Lee variables del archivo service/.env, incluyendo GOOGLE_CLOUD_PROJECT_ID y los valores de los secretos (ej. ALPACA_API_KEY_ID, ALPACA_SECRET_KEY).
+Verificación de Credenciales: Comprueba las ADC para la autenticación con GCP.
+Procesamiento de Secretos: Para cada secreto configurado (actualmente, las claves de Alpaca):
+Omite el secreto si su valor en .env es un placeholder (ej. "placeholder") o está vacío.
+Construye el nombre completo del recurso del secreto en GSM.
+Obtiene la última versión activa del secreto y su payload (valor).
+Compara el valor de .env con el valor de la última versión activa.
+Si son diferentes, o si no hay versiones activas, añade una nueva versión del secreto con el valor de .env.
+Después de añadir una nueva versión, deshabilita todas las versiones anteriores que estaban activas.
+Variables de Entorno Clave (leídas de service/.env):
+
+GOOGLE_CLOUD_PROJECT_ID: ID del proyecto GCP donde residen los secretos.
+ALPACA_API_KEY_ID: Valor de la clave API de Alpaca.
+ALPACA_SECRET_KEY: Valor de la clave secreta de Alpaca.
+Constantes Importantes:
+
+SECRET_ID_ALPACA_KEY_IN_GSM: ID del secreto en GSM para la clave API de Alpaca.
+SECRET_ID_ALPACA_SECRET_IN_GSM: ID del secreto en GSM para la clave secreta de Alpaca.
+Dependencias:
+
+Python dotenv.
+Google Cloud Client Library para Python: google-cloud-secret-manager.
+Módulos internos: tools.scripts.utils_general y tools.scripts.f04_gcp_setup.utils_gcp.
+CLI de gcloud (para ADC).
+Uso (si se ejecuta directamente): Configura sys.path y llama a main(). Sale con código 1 en caso de error.
+
+Entradas:
+
+Archivo service/.env conteniendo los valores actuales de los secretos a gestionar.
+Salidas y Efectos Secundarios:
+
+Añade nuevas versiones a los secretos en GSM.
+Deshabilita versiones antiguas de los secretos en GSM.
+Imprime mensajes de estado y logs.
+Mejores Prácticas y Consideraciones:
+
+Creación Previa del Secreto: Este script gestiona versiones de secretos. El "contenedor" del secreto en GSM (el recurso secreto en sí) debe ser creado previamente (ej. mediante Terraform).
+Permisos del Ejecutor: El usuario o SA que ejecuta el script necesita permisos para acceder a secretos, añadir versiones y modificar el estado de las versiones en GSM (ej. secretmanager.secretAccessor, secretmanager.secretVersionAdder, secretmanager.secretVersionManager).
+Manejo de Placeholders: Es crucial que los valores placeholder en .env no se suban accidentalmente como secretos reales. El script incluye lógica para omitirlos.
+Seguridad: Los valores reales de los secretos en service/.env deben manejarse con cuidado y no ser versionados en Git si contienen información sensible.
+'''

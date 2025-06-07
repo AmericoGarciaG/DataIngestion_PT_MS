@@ -570,3 +570,81 @@ if __name__ == "__main__":
         asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
     
     asyncio.run(main_test_fetch())
+
+
+'''
+alpaca_service.py
+
+Propósito: Este módulo contiene la lógica central de la aplicación para interactuar con la API de Alpaca. 
+Se encarga de obtener datos históricos del mercado (barras), procesarlos, almacenarlos en Firestore y notificar sobre actualizaciones a través de Pub/Sub y WebSockets.
+
+Funcionamiento Principal:
+
+Estado Global (last_fetch_status):
+Un diccionario global que rastrea el estado del último ciclo de obtención de datos: timestamps de intento/éxito, conteo de activos procesados, barras guardadas, 
+mensajes de error, y los datos de las barras más recientes.
+
+Inicialización de Clientes Alpaca:
+
+trade_api_client: Utiliza la SDK antigua (alpaca-trade-api) para operaciones de cuenta (ej. get_account()). Se configura para paper o live trading según settings.alpaca_paper.
+
+historical_data_client: Utiliza la nueva SDK (alpaca-py, específicamente StockHistoricalDataClient) para obtener datos históricos del mercado.
+
+Ambas inicializaciones manejan errores y actualizan last_fetch_status si fallan.
+
+_map_timeframe_str_to_alpaca_py(tf_str: str) -> TimeFrame: Función auxiliar para convertir una cadena de texto que representa un timeframe 
+(ej. "1day", "5min" desde settings.fetch_timeframe_str) al objeto TimeFrame requerido por la nueva SDK de Alpaca. Incluye validaciones para formatos y unidades soportadas.
+
+fetch_historical_bars_from_alpaca() (Función Principal Asíncrona): Actualiza last_attempt_timestamp_utc. Resetea contadores y mensajes de error para el ciclo actual en last_fetch_status.
+Verifica la disponibilidad de los clientes Alpaca y Firestore.
+
+Obtención de Activos: Lee la lista de activos a procesar desde la colección data/assets/symbols en Firestore.
+Procesamiento por Activo: Itera sobre cada activo:
+Obtención de Barras:
+Construye un StockBarsRequest con el símbolo, el timeframe (mapeado por _map_timeframe_str_to_alpaca_py), fechas de inicio/fin (basadas en settings.fetch_days_history), ajuste y feed.
+Llama a historical_data_client.get_stock_bars() para obtener los datos.
+Procesa la respuesta (que es una lista de tuplas) para extraer y formatear cada barra (timestamp, open, high, low, close, volume).
+Almacenamiento en Firestore:
+Si se obtuvieron barras, las guarda en una subcolección bars bajo el documento del activo correspondiente en Firestore (ej. data/assets/symbols/{asset_id}/bars/{timestamp}_{timeframe}).
+Utiliza lotes (batches) de Firestore para escrituras eficientes.
+Actualiza last_fetch_status["bars"][symbol] con los datos de las barras y last_fetch_status["latest_timestamp"].
+Publicación en Pub/Sub:
+Si se guardaron barras y el cliente Pub/Sub está disponible, publica un mensaje JSON en el tópico configurado (topic_path_historical_data) con detalles sobre la actualización (tipo de evento, ID del activo, símbolo, timeframe, conteo de barras, timestamp).
+Actualiza last_fetch_status["assets_processed_count"] y last_fetch_status["total_bars_saved_in_last_run"].
+Actualiza last_success_timestamp_utc si no hubo errores en el ciclo.
+Notificación WebSocket: Llama a manager.broadcast_data(last_fetch_status) (donde manager es de service.app.main) para enviar el estado actualizado a todos los clientes WebSocket conectados.
+Bloque if __name__ == "__main__": (main_test_fetch()):
+Proporciona una función asíncrona para probar fetch_historical_bars_from_alpaca() localmente.
+Configura logging básico si no existe.
+Verifica la inicialización de los clientes.
+Llama a la función principal de fetch y luego imprime el contenido de last_fetch_status.
+Incluye la política de bucle de eventos de Windows.
+Dependencias:
+
+SDKs de Alpaca: alpaca-trade-api (antigua), alpaca-py (nueva).
+Google Cloud Client Libraries: google-cloud-firestore, google-cloud-pubsub.
+Módulos internos: service.app.config (para settings), service.app.gcp_clients (para clientes Firestore/PubSub), service.app.main (para manager de WebSockets).
+datetime, logging, json (módulos estándar).
+pandas (importado pero no usado activamente en la lógica de fetch_historical_bars_from_alpaca proporcionada; podría ser un remanente o para otras funciones no mostradas).
+Entradas:
+
+Configuración de settings (claves API de Alpaca, modo paper/live, timeframe, días de historial, configuración de Firestore/PubSub).
+Lista de activos a procesar desde Firestore.
+Datos del mercado de la API de Alpaca.
+Salidas y Efectos Secundarios:
+
+Escribe/actualiza datos de barras en Firestore.
+Publica mensajes en Google Cloud Pub/Sub.
+Actualiza el estado global last_fetch_status.
+Envía actualizaciones a través de WebSockets.
+Realiza numerosas operaciones de logging.
+Mejores Prácticas y Consideraciones:
+
+Manejo de Errores Robusto: El código incluye try-except para manejar errores de las APIs de Alpaca, Firestore y Pub/Sub, actualizando last_fetch_status apropiadamente.
+Logging Detallado: Un buen logging es crucial para depurar problemas con la obtención de datos y las interacciones con servicios externos.
+Timeframes y Fechas: La conversión y manejo correcto de timeframes y zonas horarias (se usa UTC consistentemente) es fundamental. La función _map_timeframe_str_to_alpaca_py es clave para esto.
+Eficiencia en Firestore: El uso de lotes (batches) para escribir en Firestore es importante para el rendimiento y para evitar exceder límites de operaciones.
+Desacoplamiento: El uso de Pub/Sub para notificar sobre actualizaciones de datos desacopla el servicio de obtención de datos de otros posibles consumidores. Los WebSockets proporcionan actualizaciones en tiempo real a los clientes conectados.
+Estado Global: El uso de last_fetch_status como un diccionario global para el estado es simple para una aplicación pequeña, pero para sistemas más complejos, se podría considerar un almacenamiento de estado más robusto o un patrón de gestión de estado diferente.
+SDKs de Alpaca: El script utiliza tanto la SDK antigua como la nueva de Alpaca, lo cual es una decisión de diseño basada en las capacidades de cada una en el momento de la implementación (la nueva SDK se enfoca en datos, mientras que la antigua podría seguir siendo necesaria para operaciones de trading/cuenta).
+'''
