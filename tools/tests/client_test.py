@@ -74,7 +74,7 @@ def print_data_update(parsed_data: dict, show_all_bars: bool = False):
                     print(f"  {bar['timestamp']}: O=${bar['open']:.2f}, H=${bar['high']:.2f}, "
                           f"L=${bar['low']:.2f}, C=${bar['close']:.2f}, V={bar['volume']}")
             else:
-                # Show first 2 and last 2 bars
+                # Show first 2 and last 2 bars.
                 for i, bar in enumerate(bars):
                     if i < 2 or i >= len(bars) - 2:
                         print(f"  {bar['timestamp']}: O=${bar['open']:.2f}, H=${bar['high']:.2f}, "
