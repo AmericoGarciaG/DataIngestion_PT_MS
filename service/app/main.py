@@ -1,4 +1,18 @@
 # app/main.py
+"""
+Microservicio para la obtención y distribución de datos históricos de Alpaca.
+
+Este módulo implementa un servicio FastAPI que obtiene datos históricos de barras
+de precios desde Alpaca, los almacena en Firestore y proporciona endpoints HTTP y
+WebSocket para acceder a estos datos. El servicio programa la obtención de datos
+periódicamente según la configuración especificada.
+
+Funcionalidades principales:
+- Obtención programada de datos históricos de Alpaca
+- API HTTP para verificación de estado y consulta de información
+- API WebSocket para recibir actualizaciones en tiempo real con sistema de suscripción
+"""
+
 # VERSIÓN FINAL CON LOGS ADICIONALES PARA DEPURACIÓN
 
 import asyncio
@@ -23,6 +37,18 @@ scheduler = AsyncIOScheduler(timezone="UTC")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    """
+    Gestiona el ciclo de vida de la aplicación FastAPI.
+    
+    Realiza las tareas de inicialización al arrancar la aplicación y las tareas
+    de limpieza al cerrarla.
+    
+    Args:
+        app: La instancia de FastAPI
+        
+    Yields:
+        None: Control devuelto a FastAPI durante la vida de la aplicación
+    """
     # --- Código de Inicio (Startup) ---
     logger.info("Application startup...")
     logger.info(f"Server starting on {settings.app_host}:{settings.app_port}")
@@ -63,10 +89,23 @@ app = FastAPI(lifespan=lifespan)
 # --- Endpoints de la API ---
 @app.get("/_health")
 async def health_check():
+    """
+    Endpoint para verificar la salud del servicio.
+    
+    Returns:
+        dict: Estado de salud y timestamp actual
+    """
     return {"status": "healthy", "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat()}
 
 @app.get("/")
 async def read_root():
+    """
+    Endpoint raíz que proporciona información general del servicio y el estado
+    de la última obtención de datos.
+    
+    Returns:
+        dict: Información del servicio y resumen del estado de los datos
+    """
     status_summary = last_fetch_status.copy()
     bars_dict = status_summary.get("bars", {})
     status_summary["bars_count"] = sum(len(bars) for bars in bars_dict.values())
@@ -79,13 +118,24 @@ async def read_root():
 
 # --- Lógica del WebSocket ---
 class ConnectionManager:
+    """
+    Gestiona las conexiones WebSocket activas y la distribución de datos.
+    
+    Permite a los clientes suscribirse a símbolos específicos y recibir
+    actualizaciones filtradas según sus suscripciones.
+    """
     def __init__(self):
         # El diccionario ahora almacena un set de símbolos para cada conexión
         self.active_connections: Dict[WebSocket, Set[str]] = {}
         self._lock = asyncio.Lock()
 
     async def connect(self, websocket: WebSocket):
-        """Acepta una nueva conexión WebSocket y la añade a la lista."""
+        """
+        Acepta una nueva conexión WebSocket y la añade a la lista.
+        
+        Args:
+            websocket: La conexión WebSocket a registrar
+        """
         await websocket.accept()
         async with self._lock:
             # Inicialmente, el cliente no está suscrito a nada.
@@ -93,21 +143,38 @@ class ConnectionManager:
         logger.info(f"WebSocket client connected: {websocket.client}")
 
     async def disconnect(self, websocket: WebSocket):
-        """Elimina una conexión WebSocket de la lista."""
+        """
+        Elimina una conexión WebSocket de la lista.
+        
+        Args:
+            websocket: La conexión WebSocket a eliminar
+        """
         async with self._lock:
             if websocket in self.active_connections:
                 del self.active_connections[websocket]
         logger.info(f"WebSocket client disconnected: {websocket.client}")
 
     async def update_subscription(self, websocket: WebSocket, symbols: list[str]):
-        """Actualiza la suscripción de símbolos para una conexión específica."""
+        """
+        Actualiza la suscripción de símbolos para una conexión específica.
+        
+        Args:
+            websocket: La conexión WebSocket a actualizar
+            symbols: Lista de símbolos a los que el cliente desea suscribirse
+        """
         async with self._lock:
             if websocket in self.active_connections:
                 self.active_connections[websocket] = set(symbols)
                 logger.info(f"Client {websocket.client} updated subscription to: {symbols}")
 
     async def broadcast_data(self, data: dict):
-        """Envía datos a todos los clientes conectados, filtrando por su suscripción."""
+        """
+        Envía datos a todos los clientes conectados, filtrando por su suscripción.
+        
+        Args:
+            data: Diccionario con los datos a enviar, incluyendo una clave 'bars'
+                 que contiene datos por símbolo
+        """
         if not self.active_connections:
             return
 
@@ -142,9 +209,13 @@ manager = ConnectionManager()
 async def websocket_endpoint(websocket: WebSocket):
     """
     Maneja las conexiones WebSocket.
+    
     1. Acepta la conexión.
     2. Envía el estado actual.
     3. Entra en un bucle para escuchar mensajes de suscripción.
+    
+    Args:
+        websocket: La conexión WebSocket a manejar
     """
     await manager.connect(websocket)
     
@@ -190,74 +261,139 @@ if __name__ == "__main__":
 
 
 '''
-main.py
-Propósito: Este es el archivo principal de la aplicación de servicio, construido con FastAPI. Define los endpoints de la API HTTP, maneja las conexiones WebSocket para la comunicación en tiempo real, y programa la tarea periódica de obtención de datos históricos de Alpaca.
+# main.py
 
-Funcionamiento Principal:
+## Propósito
+Archivo principal de la aplicación de servicio construida con **FastAPI**. 
+Define los endpoints HTTP, maneja las conexiones **WebSocket** para comunicación en tiempo real y 
+programa la tarea periódica de obtención de datos históricos de **Alpaca**.
 
-Configuración de Logging y Scheduler:
-Configura logging básico.
-Crea una instancia de AsyncIOScheduler para programar tareas asíncronas.
-Contexto de Vida de la Aplicación (lifespan):
-Al Inicio (startup):
-Registra el inicio de la aplicación y la configuración del servidor.
-Realiza una llamada inicial a fetch_historical_bars_from_alpaca() para obtener datos inmediatamente al arrancar.
-Configura y añade un trabajo al scheduler para ejecutar fetch_historical_bars_from_alpaca periódicamente. El tipo de trigger (intervalo o cron) y sus parámetros se leen de settings.
-Inicia el scheduler.
-Al Cierre (shutdown):
-Registra el cierre de la aplicación.
-Detiene el scheduler.
-Instancia de FastAPI:
-Crea la instancia app = FastAPI(lifespan=lifespan).
-Endpoints HTTP API:
-GET /_health: Endpoint de verificación de salud simple, devuelve estado "healthy" y timestamp.
-GET /: Endpoint raíz, devuelve un mensaje de bienvenida, información del servicio (puerto, timeframe, configuración del schedule) y un resumen del último estado de obtención de datos (last_fetch_status, excluyendo el detalle de las barras para brevedad).
-Gestión de Conexiones WebSocket (ConnectionManager):
-Clase para administrar las conexiones WebSocket activas.
-active_connections: Un diccionario que mapea objetos WebSocket a un conjunto de símbolos a los que el cliente está suscrito.
-connect(websocket): Acepta una nueva conexión y la añade, inicialmente sin suscripciones.
-disconnect(websocket): Elimina una conexión.
-update_subscription(websocket, symbols): Actualiza el conjunto de símbolos para una conexión específica.
-broadcast_data(data): Envía datos a todos los clientes conectados. Si un cliente tiene suscripciones activas, filtra los datos de data["bars"] para enviar solo los símbolos suscritos. Si no tiene suscripciones, envía todos los datos.
-Instancia del Gestor: manager = ConnectionManager().
-Endpoint WebSocket (/ws):
-websocket_endpoint(websocket: WebSocket):
-Llama a manager.connect() para registrar la nueva conexión.
-Envía inmediatamente el estado actual (last_fetch_status) al cliente recién conectado (sin filtrar, ya que aún no hay suscripción).
-Entra en un bucle para recibir mensajes del cliente:
-Espera mensajes de texto del cliente.
-Intenta parsear el mensaje como JSON.
-Si el mensaje tiene action: "subscribe" y una lista de symbols, llama a manager.update_subscription() y reenvía los datos (ahora filtrados según la nueva suscripción).
-Maneja WebSocketDisconnect y otros errores, asegurando llamar a manager.disconnect() en la cláusula finally.
-Bloque if __name__ == "__main__"::
-Permite ejecutar la aplicación directamente usando Uvicorn.
-Lee settings.app_host y settings.app_port para la configuración del servidor.
-Dependencias:
+---
 
-fastapi
-uvicorn (para ejecutar el servidor ASGI)
-apscheduler (para la programación de tareas)
-Módulos internos: service.app.alpaca_service (para fetch_historical_bars_from_alpaca y last_fetch_status), service.app.config (para settings).
-asyncio, datetime, json, logging (módulos estándar).
-Entradas:
+## Funcionamiento Principal
 
-Configuración de settings (host, puerto, parámetros del planificador, etc.).
-Solicitudes HTTP a los endpoints definidos.
-Conexiones y mensajes de clientes WebSocket.
-Salidas y Efectos Secundarios:
+### Configuración de Logging y Scheduler
 
-Ejecuta un servidor web ASGI que responde a solicitudes HTTP y maneja conexiones WebSocket.
-Ejecuta periódicamente la tarea de obtención de datos de Alpaca.
-Envía datos y actualizaciones a los clientes WebSocket conectados.
-Registra eventos de la aplicación, solicitudes, conexiones y errores.
-Mejores Prácticas y Consideraciones:
+* Configura logging básico.
+* Crea una instancia de `AsyncIOScheduler` para programar tareas asíncronas.
 
-Gestión del Ciclo de Vida (lifespan): Usar lifespan es la forma recomendada en FastAPI para manejar tareas de inicio y cierre, como la inicialización y detención de schedulers.
-Programación de Tareas Asíncronas: AsyncIOScheduler es adecuado para un entorno asyncio como el de FastAPI.
-Gestión de Conexiones WebSocket: La clase ConnectionManager encapsula bien la lógica de manejo de múltiples clientes WebSocket.
-Suscripciones WebSocket: Implementar un sistema de suscripción permite a los clientes recibir solo los datos que les interesan, lo que es más eficiente que transmitir todo a todos.
-Manejo de Errores en WebSockets: Es importante manejar desconexiones y errores de comunicación en el endpoint WebSocket para evitar que una conexión fallida afecte al servidor.
-Seguridad: Para aplicaciones en producción, se deben considerar aspectos de seguridad como la autenticación/autorización para los endpoints HTTP y WebSocket, y la configuración de CORS si es necesario.
-Escalabilidad: Para un gran número de conexiones WebSocket, se podrían necesitar soluciones más avanzadas de gestión de conexiones o balanceo de carga.
+### Contexto de Vida de la Aplicación (`lifespan`)
+
+#### Al Inicio (startup):
+
+* Registra el inicio de la aplicación y configuración del servidor 
+* Llama a `fetch_historical_bars_from_alpaca()` para obtener datos inmediatamente.
+* Programa la ejecución periódica de `fetch_historical_bars_from_alpaca` según `settings` (intervalo o cron).
+* Inicia el scheduler.
+
+#### Al Cierre (shutdown):
+
+* Registra el cierre de la aplicación.
+* Detiene el scheduler.
+
+---
+
+### Instancia de FastAPI
+
+```python
+app = FastAPI(lifespan=lifespan)
+```
+
+---
+
+## Endpoints HTTP API
+
+* `GET /_health`: Verificación de salud, devuelve estado "healthy" y timestamp.
+* `GET /`: Devuelve mensaje de bienvenida, configuración básica (puerto, timeframe, schedule) y resumen de `last_fetch_status` (sin detalle de barras).
+
+---
+
+## WebSocket – Gestión de Conexiones (`ConnectionManager`)
+
+### Clase `ConnectionManager`
+
+* `active_connections`: Diccionario que mapea `WebSocket` a símbolos suscritos.
+* `connect(websocket)`: Acepta y registra nueva conexión.
+* `disconnect(websocket)`: Elimina la conexión.
+* `update_subscription(websocket, symbols)`: Actualiza suscripciones del cliente.
+* `broadcast_data(data)`: Envía `data["bars"]` filtrado por símbolos suscritos a cada cliente (o todo si no hay suscripciones).
+
+### Instancia del gestor
+
+```python
+manager = ConnectionManager()
+```
+
+---
+
+## Endpoint WebSocket (`/ws`)
+
+```python
+websocket_endpoint(websocket: WebSocket)
+```
+
+* Registra conexión: `manager.connect()`.
+* Envía `last_fetch_status` sin filtrar al conectar.
+* Bucle de escucha:
+
+  * Recibe mensajes de cliente (espera JSON).
+  * Si contiene `action: "subscribe"` con `symbols`, actualiza suscripción y reenvía datos filtrados.
+* Manejo de errores:
+
+  * Detecta desconexiones (`WebSocketDisconnect`).
+  * Asegura `manager.disconnect()` en `finally`.
+
+---
+
+## Bloque `if __name__ == "__main__"`
+
+* Permite ejecutar el servicio con `uvicorn`.
+* Usa `settings.app_host` y `settings.app_port`.
+
+---
+
+## Dependencias
+
+### Externas
+
+* `fastapi`
+* `uvicorn`
+* `apscheduler`
+
+### Internas
+
+* `service.app.alpaca_service` → `fetch_historical_bars_from_alpaca`, `last_fetch_status`
+* `service.app.config` → `settings`
+
+### Estándar
+
+* `asyncio`, `datetime`, `json`, `logging`
+
+---
+
+## Entradas
+
+* Configuración desde `settings`.
+* Solicitudes HTTP.
+* Conexiones WebSocket y sus mensajes.
+
+## Salidas y Efectos Secundarios
+
+* Ejecuta servidor ASGI (HTTP + WebSocket).
+* Ejecuta tareas periódicas.
+* Transmite datos a clientes WebSocket.
+* Registra eventos importantes (startup, shutdown, errores).
+
+---
+
+## Mejores Prácticas y Consideraciones
+
+* **Lifespan**: Recomendado por FastAPI para tareas de ciclo de vida.
+* **Tareas Asíncronas**: Uso correcto de `AsyncIOScheduler` en entorno asyncio.
+* **WebSockets**: `ConnectionManager` encapsula bien la lógica de múltiples clientes.
+* **Suscripciones**: Sistema eficiente de publicación solo de datos relevantes.
+* **Manejo de Errores**: Evita fugas de recursos ante desconexiones inesperadas.
+* **Seguridad**: Considerar autenticación/autorización y CORS para producción.
+* **Escalabilidad**: Evaluar mecanismos de balanceo o almacenamiento de estado compartido para muchas conexiones.
 
 '''

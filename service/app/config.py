@@ -1,4 +1,13 @@
 # PROJECT_ROOT/app/config.py
+"""
+Módulo de configuración para la aplicación de servicio.
+
+Este módulo gestiona la configuración de la aplicación utilizando pydantic-settings
+para cargar, validar y acceder a los parámetros desde un archivo .env y/o variables
+de entorno del sistema. Define todos los parámetros necesarios para la conexión con
+Alpaca, GCP (Firestore y Pub/Sub), y la configuración del servidor y planificador.
+"""
+
 import os
 from pathlib import Path
 import logging
@@ -8,6 +17,13 @@ from dotenv import load_dotenv
 logger = logging.getLogger(__name__)
 
 class Settings(BaseSettings):
+    """
+    Clase de configuración basada en Pydantic.
+    
+    Define todos los parámetros de configuración de la aplicación con tipos de datos
+    y valores predeterminados. Carga automáticamente valores desde variables de entorno
+    o archivo .env.
+    """
     model_config = SettingsConfigDict(
         env_file='.env',
         env_file_encoding='utf-8',
@@ -26,6 +42,12 @@ class Settings(BaseSettings):
     fetch_days_history: int = 30
 
     def __init__(self, **data):
+        """
+        Inicializa la configuración y registra los valores para depuración.
+        
+        Args:
+            **data: Datos de configuración proporcionados explícitamente
+        """
         super().__init__(**data)
         # Log all settings for debugging
         logger.debug("Initialized settings with values:")
@@ -86,62 +108,98 @@ if settings.schedule_trigger == 'cron' and (settings.schedule_hour is None or se
 settings.pubsub_historical_data_topic_id = settings.pubsub_topic_name # Asegurar que gcp_clients.py use este
 
 '''
-config.py
-Propósito: Este módulo gestiona la configuración de la aplicación de servicio (FastAPI). Utiliza la librería pydantic-settings para cargar, 
-validar y acceder a los parámetros de configuración desde un archivo .env y/o variables de entorno del sistema.
+# `config.py`
 
-Funcionamiento Principal:
+## 🎯 Propósito
 
-Definición de la Clase Settings:
-Hereda de pydantic_settings.BaseSettings.
-model_config: Configura Pydantic para leer de un archivo .env, ser insensible a mayúsculas/minúsculas para los nombres de las variables de entorno, e ignorar campos extra.
-Parámetros de Configuración: Define los atributos de configuración con tipos de datos y valores predeterminados. Estos incluyen:
-Configuración de Alpaca (alpaca_api_key_id, alpaca_secret_key, alpaca_paper, alpaca_asset_symbol).
-Configuración de obtención de datos históricos (fetch_timeframe_str, fetch_days_history).
-Configuración del planificador de tareas (schedule_trigger, schedule_minutes, schedule_hour, schedule_minute).
-Configuración del servidor Uvicorn (app_host, app_port).
-Configuración de GCP (google_cloud_project_id).
-Nombres de colecciones de Firestore.
-Configuración de Pub/Sub (pubsub_topic_name).
-__init__: El constructor de Pydantic maneja la carga. Se añade logging para mostrar los valores inicializados.
-Carga Explícita de .env: Se utiliza dotenv.load_dotenv para cargar el archivo service/.env explícitamente, asegurando que las variables estén disponibles para Pydantic.
-Instancia de Configuración: Se crea una instancia global settings = Settings(), que será importada y utilizada por otros módulos de la aplicación.
-Bloques de Validación Adicional:
-Verifica si las claves de Alpaca están usando los valores predeterminados y muestra una advertencia si es así (excepto en entornos de prueba o CI).
-Valida que los parámetros del planificador (schedule_minutes, schedule_hour, schedule_minute) sean consistentes con el schedule_trigger seleccionado.
-Inicialización de pubsub_historical_data_topic_id: Se asigna el valor de settings.pubsub_topic_name a settings.pubsub_historical_data_topic_id para ser usado por los clientes GCP.
-Variables de Entorno Clave (leídas de service/.env o del sistema):
+Gestiona la configuración de la aplicación de servicio (basada en FastAPI), utilizando `pydantic-settings` para:
 
-Todas las definidas como atributos en la clase Settings (Pydantic busca ALPACA_API_KEY_ID para alpaca_api_key_id, etc.).
-GOOGLE_CLOUD_PROJECT_ID
-Dependencias:
+- Cargar y validar parámetros desde un archivo `.env` y/o variables de entorno
+- Facilitar el acceso tipado a la configuración desde otros módulos
 
-pydantic-settings
-python-dotenv
-logging (módulo estándar)
-Uso: Este módulo no se ejecuta directamente. Otros módulos de la aplicación importan la instancia settings:
+---
 
-python
-# Ejemplo de uso en otro módulo:
-# from .config import settings
-#
-# if settings.alpaca_paper:
-#     print("Modo Paper de Alpaca activado.")
-# project_id = settings.google_cloud_project_id
-Entradas:
+## ⚙️ Funcionamiento Principal
 
-Archivo service/.env ubicado en el directorio service/.
-Variables de entorno del sistema (pueden sobrescribir los valores de .env).
-Salidas y Efectos Secundarios:
+### 🧱 Clase `Settings`
+- Hereda de `pydantic_settings.BaseSettings`
+- Configuración de `model_config`:
+  - Lee desde archivo `.env`
+  - Ignora campos extra
+  - `case_sensitive = False` para insensibilidad a mayúsculas
 
-Proporciona una instancia settings con todos los parámetros de configuración cargados y validados.
-Imprime advertencias o lanza errores si las validaciones fallan.
-Registra los valores de configuración inicializados si el logging está configurado para DEBUG.
-Mejores Prácticas y Consideraciones:
+### 🔧 Parámetros de Configuración
+Define atributos con tipos y valores predeterminados para:
 
-Centralización: Es una buena práctica centralizar toda la configuración de la aplicación en un solo lugar como este.
-Tipado y Validación: El uso de Pydantic ayuda a asegurar que los tipos de datos de configuración sean correctos y permite validaciones personalizadas.
-Valores Predeterminados: Proporcionar valores predeterminados sensibles es útil para el desarrollo y para configuraciones opcionales.
-Sensibilidad a Mayúsculas/Minúsculas: Configurar case_sensitive=False en model_config es conveniente para mapear variables de entorno (usualmente en mayúsculas) a atributos de Pydantic (usualmente en minúsculas).
-Manejo de Secretos: Aunque Pydantic carga las claves API, es importante que el archivo .env que contiene secretos reales no se versione en Git. Para producción, los secretos suelen inyectarse a través de variables de entorno del sistema o gestores de secretos
+#### ✅ Alpaca
+- `alpaca_api_key_id`
+- `alpaca_secret_key`
+- `alpaca_paper`
+- `alpaca_asset_symbol`
+
+#### 📈 Obtención de Datos Históricos
+- `fetch_timeframe_str`
+- `fetch_days_history`
+
+#### ⏰ Planificador de Tareas
+- `schedule_trigger`  
+- `schedule_minutes`
+- `schedule_hour`
+- `schedule_minute`
+
+#### 🌐 Configuración del Servidor
+- `app_host`
+- `app_port`
+
+#### ☁️ Google Cloud
+- `google_cloud_project_id`
+- Nombres de colecciones Firestore
+- `pubsub_topic_name`
+
+### 🔄 Carga de `.env`
+- Usa `dotenv.load_dotenv()` para cargar explícitamente `service/.env` antes de inicializar `Settings`.
+
+### 🧪 Validaciones Adicionales
+- Advierte si se usan claves Alpaca por defecto (excepto en entornos de test o CI).
+- Verifica consistencia entre parámetros del planificador y `schedule_trigger`.
+- Inicializa:
+  ```python
+  settings.pubsub_historical_data_topic_id = settings.pubsub_topic_name
+
+📄 Variables de Entorno Clave
+- Todas las definidas en la clase Settings
+(ej: ALPACA_API_KEY_ID para alpaca_api_key_id)
+- GOOGLE_CLOUD_PROJECT_ID
+
+📦 Dependencias
+- pydantic-settings
+- python-dotenv
+- logging (módulo estándar)
+
+▶️ Uso
+Este módulo no se ejecuta directamente. Se importa así desde otros módulos:
+from .config import settings
+if settings.alpaca_paper:
+    print("Modo Paper de Alpaca activado.")
+project_id = settings.google_cloud_project_id
+
+📥 Entradas
+- Archivo .env ubicado en service/.env
+- Variables de entorno del sistema
+(pueden sobrescribir los valores del archivo)
+
+📤 Salidas y Efectos Secundarios
+- Proporciona la instancia settings con la configuración validada y accesible
+- Muestra advertencias o lanza errores si alguna validación falla
+- Registra los valores inicializados si el logging está en nivel DEBUG
+
+✅ Mejores Prácticas y Consideraciones
+- Centralización: Mantener toda la configuración en un módulo dedicado mejora la mantenibilidad.
+- Tipado y Validación: Pydantic permite validaciones consistentes y ayuda a prevenir errores de tipo.
+- Valores Predeterminados: Facilitan entornos de desarrollo y uso local.
+- Case Insensitive: Usar case_sensitive=False mejora la compatibilidad con variables de entorno en mayúsculas.
+- Manejo de Secretos:
+    - No incluir .env con claves reales en el control de versiones.
+    - En producción, se recomienda usar gestores de secretos o variables del entorno del sistema.
+
 '''

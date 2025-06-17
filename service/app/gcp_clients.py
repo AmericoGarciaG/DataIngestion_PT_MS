@@ -1,4 +1,17 @@
 # app/gcp_clients.py
+"""
+Clientes para servicios de Google Cloud Platform.
+
+Este módulo centraliza la inicialización de los clientes de Google Cloud Platform (GCP)
+que la aplicación necesita, como Firestore y Pub/Sub. Proporciona instancias compartidas
+de estos clientes para ser utilizadas por otros módulos de la aplicación.
+
+Attributes:
+    db_firestore (firestore.Client): Cliente de Firestore inicializado o None si falló.
+    publisher_client (pubsub_v1.PublisherClient): Cliente de Pub/Sub inicializado o None si falló.
+    topic_path_historical_data (str): Ruta completa del tópico de Pub/Sub para datos históricos o None.
+"""
+
 from google.cloud import firestore
 from google.cloud import pubsub_v1
 from .config import settings
@@ -6,6 +19,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+# Inicialización del cliente de Firestore
 db_firestore = None
 try:
     # project se autodetecta si está en GCP, o lo toma de env var GOOGLE_CLOUD_PROJECT_ID
@@ -15,6 +29,7 @@ except Exception as e:
     logger.error(f"Failed to initialize Firestore client: {e}", exc_info=True)
 
 
+# Inicialización del cliente de Pub/Sub y configuración del tópico
 publisher_client = None
 topic_path_historical_data = None
 if settings.google_cloud_project_id and settings.pubsub_historical_data_topic_id: # Asegurar que el topic_id esté en settings

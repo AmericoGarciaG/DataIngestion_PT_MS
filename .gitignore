@@ -782,3 +782,8 @@ tools/tests/.venv-test/Scripts/pip3.exe
 tools/tests/.venv-test/Scripts/python.exe
 tools/tests/.venv-test/Scripts/pythonw.exe
 tools/tests/.venv-test/Scripts/websockets.exe
+tools/scripts/f00_files_setup/__pycache__/s03_setup_github_repo.cpython-312.pyc
+tools/scripts/f00_files_setup/__pycache__/s01_create_structure.cpython-312.pyc
+tools/scripts/f00_files_setup/__pycache__/s02_create_venv.cpython-312.pyc
+tools/scripts/__pycache__/utils_general.cpython-312.pyc
+.gitignore

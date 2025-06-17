@@ -277,60 +277,126 @@ if __name__ == "__main__":
     main()
 
 '''
-f02_manage_gcp_environment.py
-Propósito: Gestiona el ciclo de vida de un proyecto de Google Cloud Platform (GCP). Puede verificar la autenticación con gcloud, comprobar la existencia de un proyecto GCP, crearlo si no existe, vincularlo a una cuenta de facturación, y configurar el proyecto como predeterminado en la CLI de gcloud local y para el proyecto de cuota de las Credenciales Predeterminadas de Aplicación (ADC).
+---
 
-Funcionamiento Principal:
+````markdown
+# `f02_manage_gcp_environment.py`
 
-check_gcloud_auth_status():
-Verifica si la CLI de gcloud está instalada.
-Comprueba si hay una cuenta activa autenticada en gcloud.
-Verifica si las ADC están configuradas (intentando obtener un token de acceso).
-verify_billing_account():
-Utiliza gcloud beta billing accounts describe para verificar si la cuenta de facturación especificada es accesible por el usuario autenticado.
-manage_project_lifecycle() (Lógica Principal):
-Llama a check_gcloud_auth_status().
-Carga service/.env para obtener GOOGLE_CLOUD_PROJECT_ID, GCP_BILLING_ACCOUNT_ID, y opcionalmente GCP_ORGANIZATION_ID o GCP_FOLDER_ID.
-Llama a verify_billing_account().
-Verificación/Creación del Proyecto:
-Utiliza gcloud projects describe para comprobar si el proyecto (GOOGLE_CLOUD_PROJECT_ID) ya existe.
-Si existe y está ACTIVE, procede. Si existe pero no está ACTIVE, termina con error.
-Si no existe, intenta crearlo con gcloud projects create, asociándolo opcionalmente a una organización o carpeta. Espera un tiempo para la propagación.
-Vinculación de Facturación:
-Si el proyecto se acaba de crear, o si existe pero la facturación no está habilitada, intenta vincularlo a la GCP_BILLING_ACCOUNT_ID usando gcloud beta billing projects link.
-Configuración Local de gcloud:
-Establece el proyecto como el predeterminado en la configuración local de la CLI de gcloud (gcloud config set project).
-Establece el proyecto como el proyecto de cuota para las ADC (gcloud auth application-default set-quota-project).
-main() (Orquestador del Script):
-Llama a manage_project_lifecycle() y maneja el resultado.
-Variables de Entorno Clave (leídas de service/.env):
+## 🎯 Propósito
 
-GOOGLE_CLOUD_PROJECT_ID (o ENV_VAR_PROJECT_ID internamente)
-GCP_BILLING_ACCOUNT_ID (o ENV_VAR_BILLING_ACCOUNT internamente)
-GCP_ORGANIZATION_ID (opcional, o ENV_VAR_ORGANIZATION_ID internamente)
-GCP_FOLDER_ID (opcional, o ENV_VAR_FOLDER_ID internamente)
-Dependencias:
+Gestiona el ciclo de vida de un proyecto en Google Cloud Platform (GCP), incluyendo:
 
-CLI de gcloud.
-Python dotenv, shutil.
-Módulo interno: tools.scripts.utils_general.
-Uso (si se ejecuta directamente): Configura sys.path y llama a main(). Sale con código 1 si el proceso falla.
+- Verificación de autenticación con `gcloud`
+- Comprobación y creación de proyectos en GCP
+- Vinculación con cuenta de facturación GCP
+- Configuración local de la CLI (Command Line interface) de `gcloud` y 
+- Configuración de las ADC (Credenciales Predeterminadas de Aplicación) para la cuota de proyecto. 
 
-Entradas:
+---
 
-Archivo service/.env con los IDs de proyecto, cuenta de facturación, etc.
-Autenticación activa en la CLI de gcloud.
-Salidas y Efectos Secundarios:
+## ⚙️ Funcionalidad Principal
 
-Potencialmente crea un nuevo proyecto GCP.
-Vincula un proyecto a una cuenta de facturación.
-Modifica la configuración local de la CLI de gcloud (proyecto predeterminado, proyecto de cuota ADC).
-Imprime mensajes de estado y logs detallados.
-Mejores Prácticas y Consideraciones:
+### `check_gcloud_auth_status()`
+- Verifica si la CLI de `gcloud` está instalada.
+- Comprueba si hay una cuenta autenticada activa.
+- Verifica si las ADC están configuradas (intentando obtener un token de acceso).
 
-Permisos Elevados: El usuario que ejecuta este script a través de gcloud debe tener permisos significativos en GCP, como resourcemanager.projectCreator, billing.user (o roles más específicos para vincular proyectos a cuentas de facturación), y permisos para modificar la configuración de la organización o carpeta si se usan esos parámetros.
-Autenticación gcloud: Es fundamental que gcloud auth login se haya ejecutado previamente y que la cuenta activa tenga los permisos necesarios.
-Unicidad del ID de Proyecto: Si se crea un nuevo proyecto, el GOOGLE_CLOUD_PROJECT_ID especificado en .env debe ser globalmente único.
-Impacto: Este script puede realizar cambios significativos (creación de proyectos, facturación). Usar con precaución y comprender sus acciones.
-Idempotencia Parcial: El script intenta ser idempotente (ej. no recrea un proyecto si ya existe y está activo), pero algunas operaciones como la configuración local de gcloud se ejecutarán siempre.
+### `verify_billing_account()`
+- Utiliza `gcloud beta billing accounts describe` para validar el acceso a la cuenta de facturación especificada.
+
+### `manage_project_lifecycle()` *(Lógica Principal)*
+
+1. Llama a `check_gcloud_auth_status()`.
+2. Carga variables desde `service/.env`:
+   - `GOOGLE_CLOUD_PROJECT_ID`
+   - `GCP_BILLING_ACCOUNT_ID`
+   - `GCP_ORGANIZATION_ID` *(opcional)*
+   - `GCP_FOLDER_ID` *(opcional)*
+3. Llama a `verify_billing_account()`.
+4. **Verificación / Creación del Proyecto:**
+   - Usa `gcloud projects describe` para revisar si el proyecto existe.
+   - Si no existe, lo crea con `gcloud projects create` (opcionalmente asociado a una organización o carpeta).
+5. **Vinculación de Facturación:**
+   - Si el proyecto es nuevo o sin facturación activa, lo vincula usando `gcloud beta billing projects link`.
+6. **Configuración Local de gcloud:**
+   - Define el proyecto como predeterminado:
+     ```bash
+     gcloud config set project <ID>
+     ```
+   - Establece el proyecto de cuota para ADC:
+     ```bash
+     gcloud auth application-default set-quota-project <ID>
+     ```
+
+### `main()`
+- Orquesta todo el proceso llamando a `manage_project_lifecycle()`.
+- Sale con código `1` en caso de error.
+
+---
+
+## 📄 Variables de Entorno (`service/.env`)
+
+| Variable                 | Descripción                                |
+|--------------------------|--------------------------------------------|
+| `GOOGLE_CLOUD_PROJECT_ID` | ID del proyecto en GCP                     |
+| `GCP_BILLING_ACCOUNT_ID`  | ID de cuenta de facturación                |
+| `GCP_ORGANIZATION_ID`     | (Opcional) ID de la organización           |
+| `GCP_FOLDER_ID`           | (Opcional) ID de la carpeta dentro de GCP |
+
+---
+
+## 📦 Dependencias
+
+- [gcloud CLI](https://cloud.google.com/sdk/docs/install)
+- Librerías de Python:
+  - `dotenv`
+  - `shutil`
+- Módulo interno:
+  - `tools.scripts.utils_general`
+
+---
+
+## ▶️ Uso
+Si se ejecuta directamente:
+- Modifica `sys.path`
+- Llama a `main()`
+
+---
+
+## 📥 Entradas
+- Archivo `.env` con las variables necesarias
+- Sesión autenticada previamente en la CLI de `gcloud`
+
+---
+
+## 📤 Salidas y Efectos Secundarios
+- Posible creación de un nuevo proyecto GCP
+- Vinculación con cuenta de facturación
+- Modificación de configuración local de `gcloud` (proyecto predeterminado y de cuota ADC)
+- Impresión de logs detallados y mensajes de estado
+
+---
+
+## ✅ Mejores Prácticas y Consideraciones
+- **Permisos Requeridos:**
+  - `resourcemanager.projectCreator`
+  - `billing.user` o roles específicos para vincular facturación
+  - Permisos de organización o carpeta, si aplica
+
+- **Autenticación Previa:**
+  - Ejecutar previamente:  
+    ```bash
+    gcloud auth login
+    ```
+
+- **Unicidad del Proyecto:**
+  - El `GOOGLE_CLOUD_PROJECT_ID` debe ser globalmente único.
+
+- **Impacto Potencial:**
+  - Este script puede crear proyectos y vincular cuentas de facturación. Usar con precaución.
+
+- **Idempotencia Parcial:**
+  - No recrea proyectos existentes activos.
+  - La configuración local de `gcloud` se actualiza en cada ejecución.
+
 '''

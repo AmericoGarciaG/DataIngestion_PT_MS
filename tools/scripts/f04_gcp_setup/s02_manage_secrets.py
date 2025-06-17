@@ -156,7 +156,8 @@ if __name__ == "__main__":
 
 '''
 s02_manage_secrets.py
-Propósito: Gestiona las versiones de los secretos almacenados en Google Secret Manager (GSM). El script compara los valores de secretos definidos en el archivo service/.env con la última versión activa en GSM. Si hay diferencias o no existe una versión activa, añade una nueva versión del secreto y deshabilita las versiones anteriores.
+Propósito: Gestiona las versiones de los secretos almacenados en Google Secret Manager (GSM). 
+El script compara los valores de secretos definidos en el archivo service/.env con la última versión activa en GSM. Si hay diferencias o no existe una versión activa, añade una nueva versión del secreto y deshabilita las versiones anteriores.
 
 Funcionamiento Principal:
 

@@ -526,6 +526,10 @@ async def fetch_historical_bars_from_alpaca() -> None:
 async def main_test_fetch():
     """
     Test function to run fetch_historical_bars_from_alpaca directly.
+    
+    Esta función configura el entorno de logging y ejecuta la función principal
+    fetch_historical_bars_from_alpaca para pruebas locales. Imprime el estado
+    resultante después de la ejecución.
     """
     import logging
     import sys
@@ -573,78 +577,172 @@ if __name__ == "__main__":
 
 
 '''
-alpaca_service.py
+```python
+# alpaca_service.py
+```
 
-Propósito: Este módulo contiene la lógica central de la aplicación para interactuar con la API de Alpaca. 
-Se encarga de obtener datos históricos del mercado (barras), procesarlos, almacenarlos en Firestore y notificar sobre actualizaciones a través de Pub/Sub y WebSockets.
+## 🎯 Propósito
 
-Funcionamiento Principal:
+Este módulo contiene la lógica central de la aplicación para interactuar con la API de **Alpaca**.
+Su función es obtener datos históricos del mercado (barras), procesarlos, almacenarlos en **Firestore** y notificar actualizaciones vía **Pub/Sub** y **WebSockets**.
 
-Estado Global (last_fetch_status):
-Un diccionario global que rastrea el estado del último ciclo de obtención de datos: timestamps de intento/éxito, conteo de activos procesados, barras guardadas, 
-mensajes de error, y los datos de las barras más recientes.
+---
 
-Inicialización de Clientes Alpaca:
+## ⚙️ Funcionamiento Principal
 
-trade_api_client: Utiliza la SDK antigua (alpaca-trade-api) para operaciones de cuenta (ej. get_account()). Se configura para paper o live trading según settings.alpaca_paper.
+### 🧠 Estado Global: `last_fetch_status`
 
-historical_data_client: Utiliza la nueva SDK (alpaca-py, específicamente StockHistoricalDataClient) para obtener datos históricos del mercado.
+Diccionario global que rastrea el estado del último ciclo de obtención de datos:
 
-Ambas inicializaciones manejan errores y actualizan last_fetch_status si fallan.
+* Timestamps de intento y éxito
+* Conteo de activos procesados
+* Número de barras guardadas
+* Mensajes de error
+* Datos de las barras más recientes
 
-_map_timeframe_str_to_alpaca_py(tf_str: str) -> TimeFrame: Función auxiliar para convertir una cadena de texto que representa un timeframe 
-(ej. "1day", "5min" desde settings.fetch_timeframe_str) al objeto TimeFrame requerido por la nueva SDK de Alpaca. Incluye validaciones para formatos y unidades soportadas.
+---
 
-fetch_historical_bars_from_alpaca() (Función Principal Asíncrona): Actualiza last_attempt_timestamp_utc. Resetea contadores y mensajes de error para el ciclo actual en last_fetch_status.
-Verifica la disponibilidad de los clientes Alpaca y Firestore.
+### 🔌 Inicialización de Clientes Alpaca
 
-Obtención de Activos: Lee la lista de activos a procesar desde la colección data/assets/symbols en Firestore.
-Procesamiento por Activo: Itera sobre cada activo:
-Obtención de Barras:
-Construye un StockBarsRequest con el símbolo, el timeframe (mapeado por _map_timeframe_str_to_alpaca_py), fechas de inicio/fin (basadas en settings.fetch_days_history), ajuste y feed.
-Llama a historical_data_client.get_stock_bars() para obtener los datos.
-Procesa la respuesta (que es una lista de tuplas) para extraer y formatear cada barra (timestamp, open, high, low, close, volume).
-Almacenamiento en Firestore:
-Si se obtuvieron barras, las guarda en una subcolección bars bajo el documento del activo correspondiente en Firestore (ej. data/assets/symbols/{asset_id}/bars/{timestamp}_{timeframe}).
-Utiliza lotes (batches) de Firestore para escrituras eficientes.
-Actualiza last_fetch_status["bars"][symbol] con los datos de las barras y last_fetch_status["latest_timestamp"].
-Publicación en Pub/Sub:
-Si se guardaron barras y el cliente Pub/Sub está disponible, publica un mensaje JSON en el tópico configurado (topic_path_historical_data) con detalles sobre la actualización (tipo de evento, ID del activo, símbolo, timeframe, conteo de barras, timestamp).
-Actualiza last_fetch_status["assets_processed_count"] y last_fetch_status["total_bars_saved_in_last_run"].
-Actualiza last_success_timestamp_utc si no hubo errores en el ciclo.
-Notificación WebSocket: Llama a manager.broadcast_data(last_fetch_status) (donde manager es de service.app.main) para enviar el estado actualizado a todos los clientes WebSocket conectados.
-Bloque if __name__ == "__main__": (main_test_fetch()):
-Proporciona una función asíncrona para probar fetch_historical_bars_from_alpaca() localmente.
-Configura logging básico si no existe.
-Verifica la inicialización de los clientes.
-Llama a la función principal de fetch y luego imprime el contenido de last_fetch_status.
-Incluye la política de bucle de eventos de Windows.
-Dependencias:
+* **`trade_api_client`**
+  Usa la *SDK antigua* (`alpaca-trade-api`) para operaciones de cuenta (ej. `get_account()`).
+  Se configura en modo *paper* o *live* según `settings.alpaca_paper`.
 
-SDKs de Alpaca: alpaca-trade-api (antigua), alpaca-py (nueva).
-Google Cloud Client Libraries: google-cloud-firestore, google-cloud-pubsub.
-Módulos internos: service.app.config (para settings), service.app.gcp_clients (para clientes Firestore/PubSub), service.app.main (para manager de WebSockets).
-datetime, logging, json (módulos estándar).
-pandas (importado pero no usado activamente en la lógica de fetch_historical_bars_from_alpaca proporcionada; podría ser un remanente o para otras funciones no mostradas).
-Entradas:
+* **`historical_data_client`**
+  Usa la *nueva SDK* (`alpaca-py`, específicamente `StockHistoricalDataClient`) para obtener datos históricos.
 
-Configuración de settings (claves API de Alpaca, modo paper/live, timeframe, días de historial, configuración de Firestore/PubSub).
-Lista de activos a procesar desde Firestore.
-Datos del mercado de la API de Alpaca.
-Salidas y Efectos Secundarios:
+> Ambos clientes manejan errores y actualizan `last_fetch_status` si fallan.
 
-Escribe/actualiza datos de barras en Firestore.
-Publica mensajes en Google Cloud Pub/Sub.
-Actualiza el estado global last_fetch_status.
-Envía actualizaciones a través de WebSockets.
-Realiza numerosas operaciones de logging.
-Mejores Prácticas y Consideraciones:
+---
 
-Manejo de Errores Robusto: El código incluye try-except para manejar errores de las APIs de Alpaca, Firestore y Pub/Sub, actualizando last_fetch_status apropiadamente.
-Logging Detallado: Un buen logging es crucial para depurar problemas con la obtención de datos y las interacciones con servicios externos.
-Timeframes y Fechas: La conversión y manejo correcto de timeframes y zonas horarias (se usa UTC consistentemente) es fundamental. La función _map_timeframe_str_to_alpaca_py es clave para esto.
-Eficiencia en Firestore: El uso de lotes (batches) para escribir en Firestore es importante para el rendimiento y para evitar exceder límites de operaciones.
-Desacoplamiento: El uso de Pub/Sub para notificar sobre actualizaciones de datos desacopla el servicio de obtención de datos de otros posibles consumidores. Los WebSockets proporcionan actualizaciones en tiempo real a los clientes conectados.
-Estado Global: El uso de last_fetch_status como un diccionario global para el estado es simple para una aplicación pequeña, pero para sistemas más complejos, se podría considerar un almacenamiento de estado más robusto o un patrón de gestión de estado diferente.
-SDKs de Alpaca: El script utiliza tanto la SDK antigua como la nueva de Alpaca, lo cual es una decisión de diseño basada en las capacidades de cada una en el momento de la implementación (la nueva SDK se enfoca en datos, mientras que la antigua podría seguir siendo necesaria para operaciones de trading/cuenta).
+### 🔁 `_map_timeframe_str_to_alpaca_py(tf_str: str) -> TimeFrame`
+
+Función auxiliar para convertir strings como `"1day"` o `"5min"` (de `settings.fetch_timeframe_str`) en objetos `TimeFrame` compatibles con la nueva SDK.
+Incluye validaciones de formato y unidades.
+
+---
+
+## 📥 `fetch_historical_bars_from_alpaca()` (Función Asíncrona Principal)
+
+1. Actualiza `last_attempt_timestamp_utc` y resetea contadores y errores en `last_fetch_status`.
+2. Verifica disponibilidad de los clientes Alpaca y Firestore.
+
+### 🔍 Obtención de Activos
+
+* Lee lista de activos desde `data/assets/symbols` en Firestore.
+
+### 🧪 Procesamiento por Activo
+
+Para cada activo:
+
+#### 1. **Obtención de Barras**
+
+* Construye un `StockBarsRequest` con:
+
+  * Símbolo del activo
+  * Timeframe (convertido con `_map_timeframe_str_to_alpaca_py`)
+  * Rango de fechas (`settings.fetch_days_history`)
+  * Ajuste y feed definidos
+* Llama a `historical_data_client.get_stock_bars()`
+* Procesa la respuesta extrayendo: `timestamp`, `open`, `high`, `low`, `close`, `volume`
+
+#### 2. **Almacenamiento en Firestore**
+
+* Guarda las barras (si existen) en `data/assets/symbols/{asset_id}/bars/{timestamp}_{timeframe}`
+* Usa **lotes (batches)** para eficiencia
+* Actualiza `last_fetch_status["bars"][symbol]` y `last_fetch_status["latest_timestamp"]`
+
+#### 3. **Publicación en Pub/Sub**
+
+* Publica mensaje JSON en el tópico (`topic_path_historical_data`) si hay barras nuevas:
+
+  * Tipo de evento
+  * ID y símbolo del activo
+  * Timeframe
+  * Cantidad de barras
+  * Timestamp
+* Actualiza:
+
+  * `assets_processed_count`
+  * `total_bars_saved_in_last_run`
+  * `last_success_timestamp_utc` (si no hubo errores)
+
+#### 4. **Notificación vía WebSocket**
+
+* Llama a `manager.broadcast_data(last_fetch_status)`
+  (`manager` proviene de `service.app.main`)
+  Envia actualizaciones a clientes WebSocket conectados.
+
+---
+
+## 🧪 Bloque `if __name__ == "__main__":` → `main_test_fetch()`
+
+Función para pruebas locales de `fetch_historical_bars_from_alpaca()`:
+
+* Configura logging básico si no existe.
+* Verifica inicialización de clientes.
+* Llama a la función principal.
+* Imprime `last_fetch_status`.
+* Configura política de bucle de eventos de Windows.
+
+---
+
+## 🧩 Dependencias
+
+* **SDKs Alpaca**:
+
+  * `alpaca-trade-api` (antigua)
+  * `alpaca-py` (nueva)
+* **Google Cloud**:
+
+  * `google-cloud-firestore`
+  * `google-cloud-pubsub`
+* **Módulos internos**:
+
+  * `service.app.config` (para settings)
+  * `service.app.gcp_clients` (para clientes Firestore y Pub/Sub)
+  * `service.app.main` (para WebSockets)
+* **Otros**:
+
+  * `datetime`, `logging`, `json` (estándar)
+  * `pandas` (importado pero no usado en esta función)
+
+---
+
+## 📥 Entradas
+
+* Configuración (`settings`):
+
+  * Claves API de Alpaca
+  * Modo paper/live
+  * Timeframe
+  * Días de historial
+  * Config de Firestore y Pub/Sub
+* Lista de activos desde Firestore
+* Datos históricos de Alpaca
+
+---
+
+## 📤 Salidas y Efectos Secundarios
+
+* Guarda datos de barras en Firestore
+* Publica en Google Cloud Pub/Sub
+* Actualiza `last_fetch_status`
+* Notifica por WebSocket
+* Registro detallado en logs
+
+---
+
+## ✅ Buenas Prácticas y Consideraciones
+
+* **Manejo de errores robusto**: Uso extensivo de `try-except`, actualiza estado en caso de fallo.
+* **Logging detallado**: Clave para depurar interacciones con APIs y servicios.
+* **Conversión de timeframes y zonas horarias**: Consistencia en UTC. Uso correcto de `TimeFrame`.
+* **Eficiencia con Firestore**: Uso de *batches* evita límites y mejora velocidad.
+* **Desacoplamiento**: Pub/Sub permite separación entre obtención de datos y su consumo. WebSockets notifican en tiempo real.
+* **Estado Global**: `last_fetch_status` es suficiente en sistemas pequeños. En escenarios más complejos, considerar arquitecturas de gestión de estado más robustas.
+* **Uso dual de SDKs Alpaca**: Combina lo mejor de cada SDK. La nueva (alpaca-py) es ideal para datos; la antigua sigue siendo útil para operaciones de cuenta o trading.
+
+---
+
 '''
