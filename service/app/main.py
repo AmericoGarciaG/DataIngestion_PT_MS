@@ -261,16 +261,16 @@ if __name__ == "__main__":
 
 
 '''
-# main.py
+# service/app/main.py
 
-## Propósito
+## 🎯 Propósito
 Archivo principal de la aplicación de servicio construida con **FastAPI**. 
 Define los endpoints HTTP, maneja las conexiones **WebSocket** para comunicación en tiempo real y 
 programa la tarea periódica de obtención de datos históricos de **Alpaca**.
 
 ---
 
-## Funcionamiento Principal
+## ⚙️ Funcionamiento Principal
 
 ### Configuración de Logging y Scheduler
 
@@ -301,16 +301,16 @@ app = FastAPI(lifespan=lifespan)
 
 ---
 
-## Endpoints HTTP API
+### Endpoints HTTP API
 
 * `GET /_health`: Verificación de salud, devuelve estado "healthy" y timestamp.
 * `GET /`: Devuelve mensaje de bienvenida, configuración básica (puerto, timeframe, schedule) y resumen de `last_fetch_status` (sin detalle de barras).
 
 ---
 
-## WebSocket – Gestión de Conexiones (`ConnectionManager`)
+### WebSocket – Gestión de Conexiones (`ConnectionManager`)
 
-### Clase `ConnectionManager`
+#### Clase `ConnectionManager`
 
 * `active_connections`: Diccionario que mapea `WebSocket` a símbolos suscritos.
 * `connect(websocket)`: Acepta y registra nueva conexión.
@@ -318,7 +318,7 @@ app = FastAPI(lifespan=lifespan)
 * `update_subscription(websocket, symbols)`: Actualiza suscripciones del cliente.
 * `broadcast_data(data)`: Envía `data["bars"]` filtrado por símbolos suscritos a cada cliente (o todo si no hay suscripciones).
 
-### Instancia del gestor
+#### Instancia del gestor
 
 ```python
 manager = ConnectionManager()
@@ -326,7 +326,7 @@ manager = ConnectionManager()
 
 ---
 
-## Endpoint WebSocket (`/ws`)
+### Endpoint WebSocket (`/ws`)
 
 ```python
 websocket_endpoint(websocket: WebSocket)
@@ -345,39 +345,41 @@ websocket_endpoint(websocket: WebSocket)
 
 ---
 
-## Bloque `if __name__ == "__main__"`
+### Bloque `if __name__ == "__main__"`
 
 * Permite ejecutar el servicio con `uvicorn`.
 * Usa `settings.app_host` y `settings.app_port`.
 
 ---
 
-## Dependencias
+## 🧩 Dependencias
 
-### Externas
+#### Externas
 
 * `fastapi`
 * `uvicorn`
 * `apscheduler`
 
-### Internas
+#### Internas
 
 * `service.app.alpaca_service` → `fetch_historical_bars_from_alpaca`, `last_fetch_status`
 * `service.app.config` → `settings`
 
-### Estándar
+#### Estándar
 
 * `asyncio`, `datetime`, `json`, `logging`
 
 ---
 
-## Entradas
+## 📥 Entradas
 
 * Configuración desde `settings`.
 * Solicitudes HTTP.
 * Conexiones WebSocket y sus mensajes.
 
-## Salidas y Efectos Secundarios
+---
+
+## 📤 Salidas y Efectos Secundarios
 
 * Ejecuta servidor ASGI (HTTP + WebSocket).
 * Ejecuta tareas periódicas.
@@ -386,7 +388,7 @@ websocket_endpoint(websocket: WebSocket)
 
 ---
 
-## Mejores Prácticas y Consideraciones
+## ✅ Buenas Prácticas y Consideraciones
 
 * **Lifespan**: Recomendado por FastAPI para tareas de ciclo de vida.
 * **Tareas Asíncronas**: Uso correcto de `AsyncIOScheduler` en entorno asyncio.
@@ -396,4 +398,5 @@ websocket_endpoint(websocket: WebSocket)
 * **Seguridad**: Considerar autenticación/autorización y CORS para producción.
 * **Escalabilidad**: Evaluar mecanismos de balanceo o almacenamiento de estado compartido para muchas conexiones.
 
+---
 '''

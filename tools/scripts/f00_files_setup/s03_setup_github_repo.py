@@ -322,3 +322,161 @@ if __name__ == "__main__":
         sys.path.insert(0, str(project_root_dir_for_import))
     if not main():
         sys.exit(1)
+
+'''
+# tools/scripts/f00_files_setup/s03_setup_github_repo.py
+
+## 🎯 Propósito
+
+Inicializar el repositorio Git local, configurar un archivo `.gitignore` adecuado, y crear o conectar
+con un repositorio remoto en GitHub. Este script automatiza los pasos comunes para poner un proyecto
+bajo control de versiones con Git y sincronizarlo con GitHub.
+
+---
+
+## ⚙️ Funcionamiento Principal
+
+El script sigue una serie de pasos para configurar el repositorio:
+
+1.  **Verificación de GitHub CLI (`gh`)**:
+    *   Comprueba si la CLI de GitHub (`gh`) está instalada y si el usuario está autenticado (`gh auth status`).
+    *   Si `gh` no está instalada o el usuario no está autenticado, el script muestra un error y termina, ya que es necesaria para interactuar con GitHub.
+
+2.  **Inicialización del Repositorio Git Local**:
+    *   Verifica si ya existe un directorio `.git` en la raíz del proyecto.
+    *   Si no existe, ejecuta `git init` para inicializar un nuevo repositorio Git.
+    *   Establece la rama principal a `main` usando `git branch -M main`.
+    *   Si el repositorio ya existe, simplemente asegura que la rama principal sea `main`.
+
+3.  **Configuración de `.gitignore`**:
+    *   Define una lista de reglas comunes para archivos y directorios que típicamente se ignoran en proyectos Python y Terraform (ej. `.env`, `.venv/`, `__pycache__/`, `terraform.tfstate*`).
+    *   La función `ensure_gitignore_rules` lee el `.gitignore` existente (si lo hay) o crea uno nuevo.
+    *   Añade cualquier regla de la lista que no esté ya presente en el archivo.
+    *   Si no se puede actualizar `.gitignore`, el script termina para evitar commits de archivos sensibles.
+
+4.  **Obtención de Información del Repositorio GitHub**:
+    *   Intenta cargar variables de entorno `GITHUB_REPO_OWNER` y `GITHUB_REPO_NAME` desde un archivo `.env` (ubicado en `service/.env` o en la raíz del proyecto) si `python-dotenv` está instalado.
+    *   Si estas variables no se encuentran, solicita al usuario:
+        *   El nombre del repositorio (o `OWNER/NOMBRE_REPO`).
+        *   El propietario del repositorio (usuario u organización de GitHub), intentando autodetectar el usuario autenticado con `gh api user -q .login` como sugerencia.
+    *   Construye el nombre completo del repositorio en formato `OWNER/NOMBRE_REPO`.
+
+5.  **Creación de Commit Inicial**:
+    *   Verifica si ya existen commits en el repositorio local (`git rev-parse --verify HEAD`).
+    *   Si no hay commits:
+        *   Ejecuta `git add .` para añadir todos los archivos (respetando `.gitignore`).
+        *   Crea un commit inicial con el mensaje "Fase 0: Estructura inicial y scripts de setup base".
+        *   Si el commit falla (ej. no hay nada que commitear), lo informa.
+
+6.  **Verificación/Creación de Repositorio Remoto en GitHub**:
+    *   Utiliza `gh repo view OWNER/NOMBRE_REPO` para verificar si el repositorio ya existe en GitHub.
+    *   Si no existe:
+        *   Solicita al usuario una descripción para el repositorio y la visibilidad (public/private/internal).
+        *   Ejecuta `gh repo create OWNER/NOMBRE_REPO --visibility --description --source=. --remote=origin` para crear el repositorio en GitHub, usando el directorio actual como fuente y configurando automáticamente el remote `origin`.
+    *   Si el repositorio ya existe:
+        *   Verifica si el remote `origin` está configurado localmente y si apunta a la URL HTTPS correcta (`https://github.com/OWNER/NOMBRE_REPO.git`).
+        *   Si el remote `origin` es incorrecto, lo actualiza con `git remote set-url origin URL_CORRECTA`.
+        *   Si el remote `origin` no existe, lo añade con `git remote add origin URL_CORRECTA`.
+
+7.  **Push Inicial a GitHub**:
+    *   Si hay commits locales:
+        *   Intenta hacer push de la rama `main` al remote `origin` con `git push -u origin main`.
+        *   Si el push falla, informa al usuario sobre posibles causas (conflictos con el remoto) y sugiere comandos para resolverlo (ej. `git pull`, `git push --force`). No termina el script por esto, ya que la configuración del repo puede estar bien.
+
+8.  **Mensaje de Finalización**:
+    *   Muestra la URL del repositorio en GitHub.
+    *   Informa que la configuración ha terminado y que el script orquestador continuará.
+
+La función `main()` devuelve `True` si los pasos críticos se completan exitosamente, `False` si hay un error que impide continuar (ej. `gh` no autenticado, fallo al actualizar `.gitignore`).
+
+---
+
+## ▶️ Uso
+
+Este script está diseñado principalmente para ser llamado por el script orquestador `s00_main_initial_setup.py` después de la creación de la estructura y el venv.
+También puede ser ejecutado directamente, pero asume que `git` y `gh` CLI están instalados y que el script se ejecuta desde una ubicación donde `utils_general.get_project_root()` pueda determinar correctamente la raíz del proyecto.
+
+**Prerrequisitos**:
+*   Git instalado y accesible en el PATH.
+*   GitHub CLI (`gh`) instalada y accesible en el PATH.
+*   El usuario debe haberse autenticado con GitHub CLI (`gh auth login`) previamente.
+
+**Ejecución directa**:
+Desde la raíz del proyecto (`PROJECT_ROOT`):
+```bash
+python tools/scripts/f00_files_setup/s03_setup_github_repo.py
+```
+o
+```bash
+python -m tools.scripts.f00_files_setup.s03_setup_github_repo
+```
+
+---
+
+## 🧩 Dependencias
+
+*   **Módulos del proyecto `tools.scripts`**:
+    *   `utils_general` (alias `ug`): Para obtener la ruta raíz del proyecto y ejecutar comandos.
+*   **Módulos estándar de Python**:
+    *   `os`: Para variables de entorno y `os.name`.
+    *   `subprocess`: Para ejecutar comandos de Git y `gh` directamente en algunos casos.
+    *   `sys`: Para `sys.exit()`.
+    *   `shutil`: Para `shutil.which()` para encontrar ejecutables.
+    *   `pathlib`: Para manipulación de rutas.
+*   **Paquetes externos (opcional, para `.env`)**:
+    *   `python-dotenv`: Si está presente, se usa para cargar `GITHUB_REPO_OWNER` y `GITHUB_REPO_NAME` desde un archivo `.env`.
+
+---
+
+## 📄 Variables de Entorno Clave
+
+El script puede utilizar las siguientes variables de entorno (cargadas desde `.env` si `python-dotenv` está disponible y el archivo existe):
+
+*   `GITHUB_REPO_OWNER`: El propietario (usuario u organización) del repositorio en GitHub.
+*   `GITHUB_REPO_NAME`: El nombre del repositorio en GitHub.
+
+Si no se proporcionan, el script solicitará esta información al usuario.
+
+---
+
+## 📥 Entradas
+
+*   **Variables de Entorno** (opcional, ver sección anterior).
+*   **Input del Usuario**:
+    *   Nombre del repositorio y/o propietario si no se definen por variables de entorno.
+    *   Descripción del repositorio (opcional) si se crea uno nuevo.
+    *   Visibilidad del repositorio (public/private/internal) si se crea uno nuevo.
+*   **Estado del Sistema de Archivos**: Existencia de un directorio `.git`, contenido del `.gitignore`.
+*   **Estado de Autenticación de `gh` CLI**.
+
+---
+
+## 📤 Salidas y Efectos Secundarios
+
+*   **Sistema de Archivos**:
+    *   Crea/modifica el directorio `.git` en la raíz del proyecto.
+    *   Crea/modifica el archivo `.gitignore` en la raíz del proyecto.
+*   **Repositorio Git Local**:
+    *   Inicializa el repositorio si no existe.
+    *   Establece la rama principal a `main`.
+    *   Crea un commit inicial si no existen commits previos.
+    *   Configura el remote `origin` para apuntar al repositorio de GitHub.
+*   **Repositorio GitHub Remoto**:
+    *   Puede crear un nuevo repositorio en GitHub si no existe.
+*   **Sincronización**:
+    *   Intenta hacer `git push` de la rama `main` al remote `origin`.
+*   **Mensajes en Consola**: Imprime logs detallados del progreso, solicitudes de input, errores y mensajes de éxito.
+*   **Código de Salida**: El script termina con `sys.exit(1)` si falla un paso crítico.
+
+---
+
+## ✅ Buenas Prácticas y Consideraciones
+
+*   **Autenticación Previa de `gh`**: Es crucial que el usuario haya ejecutado `gh auth login` antes de correr este script para una experiencia fluida.
+*   **Manejo de `.gitignore`**: Añadir reglas exhaustivas al `.gitignore` desde el inicio es una buena práctica para evitar commitear archivos no deseados o sensibles.
+*   **Idempotencia Parcial**: El script intenta ser idempotente en la medida de lo posible (ej. no falla si Git ya está inicializado, si el `.gitignore` ya tiene las reglas, o si el repo remoto ya existe).
+*   **Interacción con el Usuario**: Proporciona defaults razonables y solicita input cuando es necesario, guiando al usuario.
+*   **Manejo de Errores y Sugerencias**: Intenta detectar errores comunes (ej. fallo de push) y ofrece sugerencias al usuario.
+*   **Seguridad**: Al interactuar con GitHub, depende de la seguridad de la autenticación de `gh` CLI. No maneja credenciales directamente.
+---
+'''
