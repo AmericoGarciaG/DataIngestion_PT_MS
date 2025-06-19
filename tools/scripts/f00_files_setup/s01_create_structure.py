@@ -218,3 +218,134 @@ def main() -> bool:
 if __name__ == "__main__":
     if not main():
         sys.exit(1)
+
+'''
+# tools/scripts/f00_files_setup/s01_create_structure.py
+
+## 🎯 Propósito
+
+Crear la estructura inicial de directorios y archivos para el proyecto, basándose en la configuración definida
+en el archivo `tools/project_map.json`. Este script asegura que todos los directorios necesarios existan
+y que los archivos placeholder (o archivos `__init__.py` para paquetes) estén en su lugar.
+
+---
+
+## ⚙️ Funcionamiento Principal
+
+El script opera de la siguiente manera:
+
+1.  **Carga del Mapa del Proyecto**:
+    *   Lee el archivo `PROJECT_ROOT/tools/project_map.json`. Este archivo JSON contiene dos claves principales:
+        *   `directories_to_create`: Una lista de rutas de directorios (relativas a `PROJECT_ROOT`) que deben ser creados explícitamente.
+        *   `file_mappings`: Un diccionario donde las claves son identificadores (posiblemente para un futuro sistema de backup/restore) y los valores son las rutas de archivos (relativas a `PROJECT_ROOT`) que deben ser creados.
+    *   Si `project_map.json` no se encuentra o no es válido, el script emite un error y no puede crear la estructura basada en el mapa.
+
+2.  **Creación de Directorios**:
+    *   Identifica todos los directorios que necesitan ser creados. Esto incluye:
+        *   Directorios listados explícitamente en `directories_to_create`.
+        *   Directorios padre de todos los archivos listados en `file_mappings`.
+    *   Los directorios se ordenan por profundidad para intentar crear los padres antes que los hijos.
+    *   Para cada directorio:
+        *   Se verifica si ya existe. Si no, se crea usando `pathlib.Path.mkdir(parents=True, exist_ok=True)`.
+        *   **Creación de `__init__.py`**: Se determina si se debe crear un archivo `__init__.py` en el directorio para tratarlo como un paquete. La lógica actual es:
+            *   Si el directorio es un subdirectorio directo de `tools/scripts` (ej. `tools/scripts/fXX_...`), `service/app`, o `service/tests`.
+            *   Se pueden añadir más reglas o excepciones (ej. no crear en `.vscode`, `__pycache__`).
+            *   Si `__init__.py` es requerido y no existe, se crea.
+    *   Se informa sobre directorios que estaban en `directories_to_create` pero se omitieron por estar vacíos y no ser ancestros de ningún archivo.
+
+3.  **Creación de Archivos Placeholder**:
+    *   Si `file_mappings` existe en `project_map.json`, el script pregunta al usuario si desea continuar con la creación de archivos.
+    *   Si el usuario confirma:
+        *   Para cada archivo en `file_mappings`:
+            *   Se verifica si ya existe. Si no:
+                *   Se asegura que el directorio padre del archivo exista (creándolo si es necesario).
+                *   Se crea el archivo.
+                *   Se escribe un contenido placeholder por defecto (ej. `# Placeholder para: ruta/del/archivo`), a menos que el archivo sea `__init__.py`, en cuyo caso se deja vacío.
+            *   Se omite la auto-creación si el script actual está listado en el mapa.
+    *   Si la creación de algún archivo o directorio falla, se marca un indicador de error.
+
+4.  **Resultado**:
+    *   El script imprime un resumen indicando si el proceso fue exitoso o si ocurrieron errores.
+    *   Devuelve `True` si todas las operaciones fueron exitosas, `False` en caso contrario. La función `main()` del script termina con `sys.exit(1)` si esta función devuelve `False`.
+
+El script utiliza `utils_general.get_project_root()` para determinar la raíz del proyecto y construye todas las rutas de forma relativa a esta raíz.
+
+---
+
+## ▶️ Uso
+
+Este script está diseñado para ser ejecutado directamente, usualmente como parte de un script de setup más grande (como `s00_main_initial_setup.py`), pero también puede ejecutarse individualmente para regenerar o verificar la estructura.
+
+**Prerrequisitos**:
+*   El archivo `tools/project_map.json` debe existir en la ubicación esperada (`PROJECT_ROOT/tools/project_map.json`) y ser un JSON válido con la estructura esperada.
+*   Python 3.
+
+**Ejecución**:
+Desde la raíz del proyecto (`PROJECT_ROOT`):
+```bash
+python tools/scripts/f00_files_setup/s01_create_structure.py
+```
+o
+```bash
+python -m tools.scripts.f00_files_setup.s01_create_structure
+```
+
+---
+
+## 🧩 Dependencias
+
+*   **Módulos del proyecto `tools.scripts`**:
+    *   `utils_general` (alias `ug`): Para obtener la ruta raíz del proyecto (`get_project_root()`).
+*   **Módulos estándar de Python**:
+    *   `pathlib`: Para manipulación de rutas de forma orientada a objetos.
+    *   `sys`: Para `sys.exit()`.
+    *   `json`: Para cargar y parsear `project_map.json`.
+
+---
+
+## 📥 Entradas
+
+*   **`tools/project_map.json`**: Archivo JSON que define la estructura de directorios y la lista de archivos placeholder a crear. Debe contener:
+    *   `directories_to_create` (lista de strings): Rutas de directorios a crear.
+    *   `file_mappings` (diccionario): Mapeo de claves a rutas de archivos a crear.
+    *   Ejemplo de `project_map.json`:
+        ```json
+        {
+          "directories_to_create": [
+            "docs",
+            "data/raw",
+            "service/app",
+            "service/tests"
+          ],
+          "file_mappings": {
+            "README_md": "README.md",
+            "main_py": "service/app/main.py",
+            "init_app_py": "service/app/__init__.py",
+            "gitignore": ".gitignore"
+          }
+        }
+        ```
+
+---
+
+## 📤 Salidas y Efectos Secundarios
+
+*   **Creación/Modificación del Sistema de Archivos**:
+    *   Crea directorios especificados si no existen.
+    *   Crea archivos `__init__.py` en los directorios de paquetes si no existen.
+    *   Crea archivos placeholder con contenido básico si no existen.
+*   **Mensajes en Consola**: Imprime logs detallados sobre cada operación (creación, omisión, error) y un resumen final.
+*   **Código de Salida**: El script principal (`if __name__ == "__main__":`) termina con `sys.exit(1)` si la función `main()` devuelve `False` (indicando un error).
+
+---
+
+## ✅ Buenas Prácticas y Consideraciones
+
+*   **Importancia de `project_map.json`**: Este archivo es la "fuente de verdad" para la estructura del proyecto. Mantenerlo actualizado es crucial.
+*   **Idempotencia**: El script está diseñado para ser idempotente. Si se ejecuta múltiples veces, no debería fallar ni causar problemas; simplemente omitirá la creación de directorios/archivos que ya existan.
+*   **Contenido Placeholder**: El contenido por defecto de los archivos creados es mínimo. Para archivos `__init__.py`, se crean vacíos.
+*   **Manejo de Errores**: El script intenta capturar excepciones durante operaciones de sistema de archivos e informa sobre ellas.
+*   **Modularidad de `__init__.py`**: La lógica para decidir dónde crear `__init__.py` está centralizada y puede ser ajustada según las convenciones del proyecto para definir qué directorios son paquetes.
+*   **Confirmación del Usuario**: La creación de archivos placeholder requiere una confirmación del usuario (S/n) para evitar la creación accidental de muchos archivos si no se desea.
+---
+'''

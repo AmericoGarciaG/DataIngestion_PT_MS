@@ -93,3 +93,101 @@ if __name__ == "__main__":
         sys.path.insert(0, str(project_root_dir_for_import))
     if not main():
         sys.exit(1)
+
+'''
+# tools/scripts/f00_files_setup/s02_create_venv.py
+
+## 🎯 Propósito
+
+Crear y validar un entorno virtual de Python (denominado `.venv`) en la raíz del proyecto.
+Este script asegura que el proyecto tenga un entorno aislado para sus dependencias, promoviendo
+la reproducibilidad y evitando conflictos entre paquetes de diferentes proyectos.
+
+---
+
+## ⚙️ Funcionamiento Principal
+
+1.  **Determinación de Rutas**:
+    *   Obtiene la ruta raíz del proyecto utilizando `utils_general.get_project_root()`.
+    *   Define el nombre del directorio del entorno virtual (`.venv`).
+
+2.  **Selección del Intérprete de Python**:
+    *   Utiliza el ejecutable de Python que está corriendo el propio script (`sys.executable`) para crear el entorno virtual. Esto garantiza la consistencia si múltiples versiones de Python están instaladas en el sistema.
+
+3.  **Creación del Entorno Virtual**:
+    *   Verifica si el directorio `.venv` ya existe en la raíz del proyecto.
+    *   Si no existe:
+        *   Informa al usuario que se procederá con la creación.
+        *   Ejecuta el comando `python -m venv .venv` (utilizando el `sys.executable` previamente determinado) en el directorio raíz del proyecto.
+        *   La función `run_command_for_venv` (una utilidad interna de este script) gestiona la ejecución del comando, captura de salida y manejo de errores.
+        *   Si la creación falla, el script termina informando un error.
+    *   Si el directorio `.venv` ya existe, se informa al usuario y se omite la creación.
+
+4.  **Validación de la Estructura del Entorno Virtual**:
+    *   Comprueba la existencia del ejecutable de Python dentro del entorno virtual recién creado (o existente).
+        *   En Windows: `.venv/Scripts/python.exe`
+        *   En otros sistemas (Linux/macOS): `.venv/bin/python`
+    *   Si no se encuentra el ejecutable, se considera que el entorno virtual está incompleto o corrupto, se informa un error y se sugiere eliminar el directorio `.venv` y reintentar.
+
+5.  **Mensajes Finales**:
+    *   Informa que el entorno virtual está listo (o ya existía).
+    *   Indica que el script principal (`s00_main_initial_setup.py`) guiará al usuario sobre cómo activar el venv y los siguientes pasos.
+
+La función `main()` del script devuelve `True` si todas las operaciones fueron exitosas, o `False` en caso de error. El bloque `if __name__ == "__main__":` asegura que el script termine con un código de salida `1` si `main()` reporta un fallo.
+
+---
+
+## ▶️ Uso
+
+Este script está diseñado principalmente para ser llamado por el script orquestador `s00_main_initial_setup.py`.
+Sin embargo, también puede ser ejecutado directamente si se desea crear (o recrear) únicamente el entorno virtual.
+
+**Prerrequisitos**:
+*   Python 3 instalado y accesible a través del comando `python` (o el ejecutable que corre el script).
+*   El módulo `venv` debe estar disponible en la instalación de Python (generalmente lo está por defecto).
+
+**Ejecución directa**:
+Desde la raíz del proyecto (`PROJECT_ROOT`):
+```bash
+python tools/scripts/f00_files_setup/s02_create_venv.py
+```
+o
+```bash
+python -m tools.scripts.f00_files_setup.s02_create_venv
+```
+
+---
+
+## 🧩 Dependencias
+
+*   **Módulos del proyecto `tools.scripts`**:
+    *   `utils_general` (alias `ug`): Para obtener la ruta raíz del proyecto (`get_project_root()`).
+*   **Módulos estándar de Python**:
+    *   `os`: Para manipulación de rutas y nombres de sistema operativo (`os.name`).
+    *   `subprocess`: Para ejecutar comandos externos (como `python -m venv`).
+    *   `sys`: Para acceder al ejecutable de Python actual (`sys.executable`) y para `sys.exit()`.
+    *   `pathlib`: Para manipulación de rutas de forma orientada a objetos.
+
+---
+
+## 📤 Salidas y Efectos Secundarios
+
+*   **Creación de Directorio `.venv`**: Si no existe, crea un directorio llamado `.venv` en la raíz del proyecto, conteniendo la estructura del entorno virtual de Python.
+*   **Mensajes en Consola**: Imprime información sobre el proceso, incluyendo:
+    *   La ruta del intérprete de Python utilizado.
+    *   El estado de la creación del venv (creando, omitiendo si ya existe).
+    *   Resultados de la validación del venv.
+    *   Mensajes de error detallados si ocurren problemas.
+*   **Código de Salida**: El script termina con `sys.exit(1)` si la creación o validación del venv falla cuando se ejecuta directamente.
+
+---
+
+## ✅ Buenas Prácticas y Consideraciones
+
+*   **Uso de `sys.executable`**: Asegura que el venv se cree con la misma versión de Python que ejecuta el script, lo cual es fundamental para la consistencia.
+*   **Idempotencia**: El script verifica si el directorio `.venv` ya existe y omite la creación si es así, permitiendo ejecuciones repetidas sin errores.
+*   **Validación Básica**: Comprueba la existencia del ejecutable de Python dentro del venv como una forma simple de verificar que la creación fue, al menos parcialmente, exitosa.
+*   **Manejo de Errores**: Utiliza `try-except` y verifica códigos de retorno de `subprocess` para informar errores de manera clara.
+*   **Claridad en los Mensajes**: Informa al usuario sobre las acciones que se están tomando y los resultados.
+---
+'''

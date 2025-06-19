@@ -108,10 +108,9 @@ if settings.schedule_trigger == 'cron' and (settings.schedule_hour is None or se
 settings.pubsub_historical_data_topic_id = settings.pubsub_topic_name # Asegurar que gcp_clients.py use este
 
 '''
-# `config.py`
+# service/app/config.py
 
 ## 🎯 Propósito
-
 Gestiona la configuración de la aplicación de servicio (basada en FastAPI), utilizando `pydantic-settings` para:
 
 - Cargar y validar parámetros desde un archivo `.env` y/o variables de entorno
@@ -120,7 +119,6 @@ Gestiona la configuración de la aplicación de servicio (basada en FastAPI), ut
 ---
 
 ## ⚙️ Funcionamiento Principal
-
 ### 🧱 Clase `Settings`
 - Hereda de `pydantic_settings.BaseSettings`
 - Configuración de `model_config`:
@@ -131,30 +129,30 @@ Gestiona la configuración de la aplicación de servicio (basada en FastAPI), ut
 ### 🔧 Parámetros de Configuración
 Define atributos con tipos y valores predeterminados para:
 
-#### ✅ Alpaca
-- `alpaca_api_key_id`
-- `alpaca_secret_key`
-- `alpaca_paper`
-- `alpaca_asset_symbol`
+* **Alpaca**
+    * `alpaca_api_key_id`
+    * `alpaca_secret_key`
+    * `alpaca_paper`
+    * `alpaca_asset_symbol`
 
-#### 📈 Obtención de Datos Históricos
-- `fetch_timeframe_str`
-- `fetch_days_history`
+* **Obtención de Datos Históricos**
+    * `fetch_timeframe_str`
+    * `fetch_days_history`
 
-#### ⏰ Planificador de Tareas
-- `schedule_trigger`  
-- `schedule_minutes`
-- `schedule_hour`
-- `schedule_minute`
+* **Planificador de Tareas**
+    * `schedule_trigger`
+    * `schedule_minutes`
+    * `schedule_hour`
+    * `schedule_minute`
 
-#### 🌐 Configuración del Servidor
-- `app_host`
-- `app_port`
+* **Configuración del Servidor**
+    * `app_host`
+    * `app_port`
 
-#### ☁️ Google Cloud
-- `google_cloud_project_id`
-- Nombres de colecciones Firestore
-- `pubsub_topic_name`
+* **Google Cloud**
+    * `google_cloud_project_id`
+    * Nombres de colecciones Firestore
+    * `pubsub_topic_name`
 
 ### 🔄 Carga de `.env`
 - Usa `dotenv.load_dotenv()` para cargar explícitamente `service/.env` antes de inicializar `Settings`.
@@ -165,41 +163,56 @@ Define atributos con tipos y valores predeterminados para:
 - Inicializa:
   ```python
   settings.pubsub_historical_data_topic_id = settings.pubsub_topic_name
+  ```
 
-📄 Variables de Entorno Clave
-- Todas las definidas en la clase Settings
-(ej: ALPACA_API_KEY_ID para alpaca_api_key_id)
-- GOOGLE_CLOUD_PROJECT_ID
+---
 
-📦 Dependencias
-- pydantic-settings
-- python-dotenv
-- logging (módulo estándar)
+## 📄 Variables de Entorno Clave
+- Todas las definidas en la clase `Settings` (ej: `ALPACA_API_KEY_ID` para `alpaca_api_key_id`)
+- `GOOGLE_CLOUD_PROJECT_ID`
 
-▶️ Uso
+---
+
+## 🧩 Dependencias
+- `pydantic-settings`
+- `python-dotenv`
+- `logging` (módulo estándar)
+
+---
+
+## ▶️ Uso
 Este módulo no se ejecuta directamente. Se importa así desde otros módulos:
+```python
 from .config import settings
+
 if settings.alpaca_paper:
     print("Modo Paper de Alpaca activado.")
 project_id = settings.google_cloud_project_id
+```
 
-📥 Entradas
-- Archivo .env ubicado en service/.env
-- Variables de entorno del sistema
-(pueden sobrescribir los valores del archivo)
+---
 
-📤 Salidas y Efectos Secundarios
-- Proporciona la instancia settings con la configuración validada y accesible
-- Muestra advertencias o lanza errores si alguna validación falla
-- Registra los valores inicializados si el logging está en nivel DEBUG
+## 📥 Entradas
+- Archivo `.env` ubicado en `service/.env`
+- Variables de entorno del sistema (pueden sobrescribir los valores del archivo)
 
-✅ Mejores Prácticas y Consideraciones
-- Centralización: Mantener toda la configuración en un módulo dedicado mejora la mantenibilidad.
-- Tipado y Validación: Pydantic permite validaciones consistentes y ayuda a prevenir errores de tipo.
-- Valores Predeterminados: Facilitan entornos de desarrollo y uso local.
-- Case Insensitive: Usar case_sensitive=False mejora la compatibilidad con variables de entorno en mayúsculas.
-- Manejo de Secretos:
-    - No incluir .env con claves reales en el control de versiones.
+---
+
+## 📤 Salidas y Efectos Secundarios
+- Proporciona la instancia `settings` con la configuración validada y accesible.
+- Muestra advertencias o lanza errores si alguna validación falla.
+- Registra los valores inicializados si el logging está en nivel DEBUG.
+
+---
+
+## ✅ Buenas Prácticas y Consideraciones
+- **Centralización**: Mantener toda la configuración en un módulo dedicado mejora la mantenibilidad.
+- **Tipado y Validación**: Pydantic permite validaciones consistentes y ayuda a prevenir errores de tipo.
+- **Valores Predeterminados**: Facilitan entornos de desarrollo y uso local.
+- **Case Insensitive**: Usar `case_sensitive=False` mejora la compatibilidad con variables de entorno en mayúsculas.
+- **Manejo de Secretos**:
+    - No incluir `.env` con claves reales en el control de versiones.
     - En producción, se recomienda usar gestores de secretos o variables del entorno del sistema.
 
+---
 '''
