@@ -102,6 +102,15 @@ async def read_root():
         key: value for key, value in last_fetch_status.items()
         if key != "bars" # Excluir el detalle de las barras
     }
+
+    try:
+        # Convertir a entero para un formateo seguro
+        schedule_minute_int = int(settings.schedule_minute)
+        schedule_str = f"{settings.schedule_trigger} at {settings.schedule_hour}:{schedule_minute_int:02d} UTC"
+    except (ValueError, TypeError):
+        # Fallback si los valores no son numéricos, para evitar que el endpoint falle
+        schedule_str = f"{settings.schedule_trigger} (details unavailable)"
+
     return {
         "message": "Alpaca Historical Data Microservice is running",
         "service_info": {
