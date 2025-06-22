@@ -58,8 +58,8 @@ class Settings(BaseSettings):
     # Configuración del Scheduler
     schedule_trigger: str = "cron" # "interval" o "cron"
     schedule_minutes: int | None = None # Para trigger=interval
-    schedule_hour: int | str = 21      # Para trigger=cron (UTC)
-    schedule_minute: int | str = 0     # Para trigger=cron (UTC)
+    schedule_hour: int = 21      # Para trigger=cron (UTC)
+    schedule_minute: int = 0     # Para trigger=cron (UTC)
     # schedule_second: int | str = 0 # Si APScheduler lo usa y lo necesitas    # Configuración de Uvicorn (para ejecución local y Cloud Run)
     app_host: str = "0.0.0.0"
     app_port: int = 8080  # Puerto fijo para Cloud Run
