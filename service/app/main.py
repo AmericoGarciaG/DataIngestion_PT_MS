@@ -164,9 +164,15 @@ manager = ConnectionManager()
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
-    """Maneja las conexiones WebSocket para suscripción y recepción de datos."""
+    """
+    Maneja las conexiones WebSocket para suscripción y recepción de datos.
+    1. Acepta la conexión.
+    2. Entra en un bucle para escuchar mensajes de suscripción.
+    3. Al recibir una suscripción, envía inmediatamente los datos más recientes disponibles.
+    """
     await manager.connect(websocket)
     try:
+        # Bucle principal para escuchar comandos del cliente
         while True:
             message_text = await websocket.receive_text()
             try:
@@ -174,13 +180,43 @@ async def websocket_endpoint(websocket: WebSocket):
                 if isinstance(message_data, dict) and message_data.get("action") == "subscribe":
                     symbols = message_data.get("symbols", [])
                     if isinstance(symbols, list):
+                        # Actualiza la suscripción en el ConnectionManager
                         await manager.update_subscription(websocket, symbols)
+                        
+                        # ===== INICIO DE LA MEJORA =====
+                        # Después de suscribir, envía inmediatamente los datos más recientes
+                        # que el servidor tiene para los símbolos solicitados.
+                        
+                        # 1. Copia el estado actual para no modificar el original.
+                        status_snapshot = last_fetch_status.copy()
+                        
+                        # 2. Filtra las barras para incluir solo los símbolos a los que se acaba de suscribir.
+                        filtered_bars = {
+                            s: b for s, b in status_snapshot.get("bars", {}).items()
+                            if s in symbols
+                        }
+                        
+                        # 3. Crea un payload de respuesta específico.
+                        response_payload = {
+                            "event": "subscription_ack", # "ack" = Acknowledgment (Acuse de recibo)
+                            "subscribed_symbols": symbols,
+                            "bars": filtered_bars
+                        }
+                        
+                        # 4. Envía la respuesta inmediata al cliente.
+                        await websocket.send_json(response_payload)
+                        logger.info(f"Sent subscription acknowledgment with data to {websocket.client}")
+                        # ===== FIN DE LA MEJORA =====
+
             except (json.JSONDecodeError, TypeError):
                 logger.warning(f"Received invalid message from {websocket.client}: {message_text}")
+            except Exception as e:
+                logger.error(f"Error processing message from client {websocket.client}: {e}")
+
     except WebSocketDisconnect:
         logger.info(f"Client {websocket.client} gracefully disconnected.")
     except Exception as e:
-        logger.error(f"Unexpected error with client {websocket.client}: {e}", exc_info=True)
+        logger.error(f"An unexpected error occurred with client {websocket.client}: {e}", exc_info=True)
     finally:
         await manager.disconnect(websocket)
 
