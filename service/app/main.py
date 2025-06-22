@@ -19,7 +19,7 @@ import datetime
 import json
 import logging
 from contextlib import asynccontextmanager
-from typing import Dict, Set,Any
+from typing import Dict, Set, Any
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
@@ -137,6 +137,16 @@ async def read_root():
     }
 
 # --- Lógica del WebSocket ---
+def _convert_datetimes_to_isoformat(data: Any) -> Any:
+    """Recorre recursivamente una estructura de datos y convierte objetos datetime a strings ISO 8601."""
+    if isinstance(data, dict):
+        return {k: _convert_datetimes_to_isoformat(v) for k, v in data.items()}
+    if isinstance(data, list):
+        return [_convert_datetimes_to_isoformat(item) for item in data]
+    if isinstance(data, datetime.datetime):
+        return data.isoformat()
+    return data
+
 class ConnectionManager:
     """Gestiona las conexiones WebSocket activas y la distribución de datos."""
     def __init__(self):
@@ -145,13 +155,11 @@ class ConnectionManager:
 
     async def connect(self, websocket: WebSocket):
         await websocket.accept()
-        async with self._lock:
-            self.active_connections[websocket] = set()
+        async with self._lock: self.active_connections[websocket] = set()
         logger.info(f"WebSocket client connected: {websocket.client}")
 
     async def disconnect(self, websocket: WebSocket):
-        async with self._lock:
-            self.active_connections.pop(websocket, None)
+        async with self._lock: self.active_connections.pop(websocket, None)
         logger.info(f"WebSocket client disconnected: {websocket.client}")
 
     async def update_subscription(self, websocket: WebSocket, symbols: list[str]):
@@ -161,11 +169,9 @@ class ConnectionManager:
                 logger.info(f"Client {websocket.client} updated subscription to: {symbols}")
 
     async def broadcast_data(self, data: dict):
-        if not self.active_connections:
-            return
+        if not self.active_connections: return
         
-        # Ensure datetimes in bar data are ISO strings before sending
-        processed_data = _convert_datetime_in_data(data)
+        processed_data = _convert_datetimes_to_isoformat(data)
         
         connections_to_notify = list(self.active_connections.items())
         event_symbol = processed_data.get("symbol")
@@ -175,51 +181,30 @@ class ConnectionManager:
                 try:
                     await websocket.send_json(processed_data)
                 except Exception as e:
-                    logger.error(f"Error broadcasting data to {websocket.client}: {e}", exc_info=True)
+                    logger.error(f"Error broadcasting data to {websocket.client}: {e}", exc_info=False)
 
 manager = ConnectionManager()
-
-# Helper function to convert datetime objects in data structures
-def _convert_datetime_in_data(data: Any) -> Any:
-    """
-    Recursively traverses a data structure and converts datetime objects to ISO 8601 strings.
-    Handles dictionaries, lists, and bar data structures.
-    """
-    if isinstance(data, dict):
-        if "bars" in data and isinstance(data["bars"], list):
-            # Specifically process list of bars
-            converted_bars = []
-            for bar in data["bars"]:
-                if isinstance(bar, dict):
-                    converted_bar = {}
-                    for k, v in bar.items():
-                        if isinstance(v, datetime.datetime):
-                            converted_bar[k] = v.isoformat()
-                        else:
-                            converted_bar[k] = v
-                    converted_bars.append(converted_bar)
-                else: # Should not happen if bars are dicts
-                    converted_bars.append(bar) 
-            return {**data, "bars": converted_bars}
-        else: # General dictionary processing
-            return {k: _convert_datetime_in_data(v) for k, v in data.items()}
-    elif isinstance(data, list):
-        return [_convert_datetime_in_data(item) for item in data]
-    elif isinstance(data, datetime.datetime):
-        return data.isoformat()
-    return data
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     """
     Maneja las conexiones WebSocket para suscripción y recepción de datos.
     1. Acepta la conexión.
-    2. Entra en un bucle para escuchar mensajes de suscripción.
-    3. Al recibir una suscripción, envía inmediatamente los datos más recientes disponibles.
+    2. Envía un estado inicial de bienvenida.
+    3. Entra en un bucle para escuchar mensajes de suscripción del cliente.
     """
     await manager.connect(websocket)
     try:
-        # Bucle principal para escuchar comandos del cliente
+        # Enviar un mensaje de bienvenida/estado inicial al conectar.
+        # Esto confirma la conexión al cliente y le da el estado más reciente.
+        ack_payload = {
+            "event": "connection_ack",
+            "message": "Connection successful. Send subscription messages.",
+            "latest_fetch_status": _convert_datetimes_to_isoformat(last_fetch_status)
+        }
+        await websocket.send_json(ack_payload)
+
+        # Bucle principal para escuchar comandos del cliente.
         while True:
             message_text = await websocket.receive_text()
             try:
@@ -228,35 +213,17 @@ async def websocket_endpoint(websocket: WebSocket):
                     symbols = message_data.get("symbols", [])
                     if isinstance(symbols, list):
                         await manager.update_subscription(websocket, symbols)
-                        
-                        status_snapshot = last_fetch_status.copy()
-                        
-                        raw_filtered_bars = {
-                            s: b for s, b in status_snapshot.get("bars", {}).items()
-                            if s in symbols
-                        }
-                        
-                        # Ensure datetimes are ISO strings before sending
-                        processed_filtered_bars = _convert_datetime_in_data(raw_filtered_bars)
-                        
-                        response_payload = {
+                        # Enviar una confirmación simple de la suscripción.
+                        # Los datos reales llegarán a través de los broadcasts de 'asset_update'.
+                        sub_ack_payload = {
                             "event": "subscription_ack",
-                            "subscribed_symbols": symbols,
-                            "bars": processed_filtered_bars
+                            "subscribed_symbols": symbols
                         }
-                        
-                        await websocket.send_json(response_payload)
-                        logger.info(f"Sent subscription acknowledgment with data to {websocket.client}")
+                        await websocket.send_json(sub_ack_payload)
+                        logger.info(f"Sent subscription acknowledgment to {websocket.client} for {symbols}")
 
             except (json.JSONDecodeError, TypeError) as e:
-                # Log the specific error if it's a TypeError, otherwise it's a JSONDecodeError
-                if isinstance(e, TypeError):
-                    logger.error(f"TypeError processing message from {websocket.client} (payload likely not JSON serializable): {message_text}, Error: {e}", exc_info=True)
-                else: # JSONDecodeError
-                    logger.warning(f"Received invalid JSON message from {websocket.client}: {message_text}, Error: {e}")
-            except Exception as e:
-                logger.error(f"Error processing message from client {websocket.client}: {e}", exc_info=True)
-
+                logger.warning(f"Error processing message from {websocket.client}: {e}")
     except WebSocketDisconnect:
         logger.info(f"Client {websocket.client} gracefully disconnected.")
     except Exception as e:
@@ -269,7 +236,6 @@ if __name__ == "__main__":
     import uvicorn
     logger.info(f"Starting Uvicorn server on {settings.app_host}:{settings.app_port}")
     uvicorn.run("app.main:app", host=settings.app_host, port=settings.app_port, reload=False, access_log=True, log_level="info")
-
 '''
 # service/app/main.py
 
