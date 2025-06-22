@@ -1,11 +1,17 @@
 # service/app/main.py
 """
-Microservicio para la obtención y distribución de datos históricos de Alpaca.
+Microservicio para la obtención, resguardo y distribución de datos históricos de Alpaca.
 
-Este módulo implementa un servicio FastAPI que obtiene datos históricos de barras
-de precios desde Alpaca, los almacena en Firestore y proporciona endpoints HTTP y
-WebSocket para acceder a estos datos. El servicio programa la obtención de datos
+Este módulo implementa un servicio, con modelo de acceso a datos FastAPI, 
+que obtiene datos históricos de barras de precios desde Alpaca, 
+los almacena en Firestore y proporciona endpoints HTTP y WebSocket 
+para acceder a estos datos. El servicio programa la obtención de datos
 periódicamente según la configuración especificada.
+
+Funcionalidades principales:
+- Obtención programada de datos históricos de Alpaca
+- API HTTP para verificación de estado y consulta de información del útlimo fetch
+- API WebSocket para recibir actualizaciones en tiempo real con sistema de suscripción
 """
 
 import asyncio
@@ -21,7 +27,7 @@ from apscheduler.triggers.interval import IntervalTrigger
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 
 # Hacemos una importación nombrada para que el tipado en lifespan sea más claro
-from .alpaca_service import AlpacaService, alpaca_service_instance, last_fetch_status
+from .alpaca_service import alpaca_service_instance, last_fetch_status
 from .config import settings
 from .gcp_clients import db_firestore, publisher_client
 
@@ -33,7 +39,15 @@ scheduler = AsyncIOScheduler(timezone="UTC")
 # --- Lógica del Ciclo de Vida (Lifespan) ---
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Gestiona el ciclo de vida de la aplicación, iniciando y deteniendo tareas de fondo."""
+    """
+    Gestiona el ciclo de vida de la aplicación FastAPI.
+    Realiza las tareas de inicialización al arrancar la aplicación y las tareas
+    de limpieza al cerrarla.
+    Args:
+        app: La instancia de FastAPI
+    Yields:
+        None: Control devuelto a FastAPI durante la vida de la aplicación
+    """
     logger.info("Application startup...")
     logger.info(f"Server starting on {settings.app_host}:{settings.app_port}")
     
@@ -61,7 +75,9 @@ async def lifespan(app: FastAPI):
 def _configure_scheduler_trigger():
     """Configura y devuelve el trigger de APScheduler basado en los settings."""
     if settings.schedule_trigger == 'interval':
-        return IntervalTrigger(minutes=int(settings.schedule_minutes or 5))
+        # Aseguramos que el valor sea un entero, con un default si es None
+        minutes = int(settings.schedule_minutes or 5)
+        return IntervalTrigger(minutes=minutes)
     elif settings.schedule_trigger == 'cron':
         return CronTrigger(hour=settings.schedule_hour, minute=settings.schedule_minute)
     raise ValueError(f"Invalid SCHEDULE_TRIGGER: {settings.schedule_trigger}")
@@ -115,7 +131,7 @@ async def read_root():
         "message": "Alpaca Historical Data Microservice is running",
         "service_info": {
             "timeframe": settings.fetch_timeframe_str,
-            "schedule": f"{settings.schedule_trigger} at {settings.schedule_hour}:{settings.schedule_minute:02d} UTC"
+            "schedule": schedule_str
         },
         "latest_fetch_status": status_summary
     }
@@ -149,15 +165,13 @@ class ConnectionManager:
             return
         
         connections_to_notify = list(self.active_connections.items())
-        event_symbol = data.get("symbol") # Presente en 'asset_update', no en 'cycle_complete'
+        event_symbol = data.get("symbol")
 
         for websocket, subscribed_symbols in connections_to_notify:
-            # Enviar si es un evento global (no tiene 'symbol') o si el cliente está suscrito al símbolo del evento
-            if not event_symbol or event_symbol in subscribed_symbols:
+            if not event_symbol or event_symbol in subscribed_symbols or not subscribed_symbols:
                 try:
                     await websocket.send_json(data)
                 except Exception:
-                    # La desconexión se manejará en el endpoint principal
                     pass
 
 manager = ConnectionManager()
@@ -180,33 +194,23 @@ async def websocket_endpoint(websocket: WebSocket):
                 if isinstance(message_data, dict) and message_data.get("action") == "subscribe":
                     symbols = message_data.get("symbols", [])
                     if isinstance(symbols, list):
-                        # Actualiza la suscripción en el ConnectionManager
                         await manager.update_subscription(websocket, symbols)
                         
-                        # ===== INICIO DE LA MEJORA =====
-                        # Después de suscribir, envía inmediatamente los datos más recientes
-                        # que el servidor tiene para los símbolos solicitados.
-                        
-                        # 1. Copia el estado actual para no modificar el original.
                         status_snapshot = last_fetch_status.copy()
                         
-                        # 2. Filtra las barras para incluir solo los símbolos a los que se acaba de suscribir.
                         filtered_bars = {
                             s: b for s, b in status_snapshot.get("bars", {}).items()
                             if s in symbols
                         }
                         
-                        # 3. Crea un payload de respuesta específico.
                         response_payload = {
-                            "event": "subscription_ack", # "ack" = Acknowledgment (Acuse de recibo)
+                            "event": "subscription_ack",
                             "subscribed_symbols": symbols,
                             "bars": filtered_bars
                         }
                         
-                        # 4. Envía la respuesta inmediata al cliente.
                         await websocket.send_json(response_payload)
                         logger.info(f"Sent subscription acknowledgment with data to {websocket.client}")
-                        # ===== FIN DE LA MEJORA =====
 
             except (json.JSONDecodeError, TypeError):
                 logger.warning(f"Received invalid message from {websocket.client}: {message_text}")
@@ -225,7 +229,6 @@ if __name__ == "__main__":
     import uvicorn
     logger.info(f"Starting Uvicorn server on {settings.app_host}:{settings.app_port}")
     uvicorn.run("app.main:app", host=settings.app_host, port=settings.app_port, reload=False, access_log=True, log_level="info")
-
 
 '''
 # service/app/main.py
