@@ -19,7 +19,7 @@ import datetime
 import json
 import logging
 from contextlib import asynccontextmanager
-from typing import Dict, Set
+from typing import Dict, Set,Any
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
@@ -164,17 +164,50 @@ class ConnectionManager:
         if not self.active_connections:
             return
         
+        # Ensure datetimes in bar data are ISO strings before sending
+        processed_data = _convert_datetime_in_data(data)
+
         connections_to_notify = list(self.active_connections.items())
-        event_symbol = data.get("symbol")
+        event_symbol = processed_data.get("symbol")
 
         for websocket, subscribed_symbols in connections_to_notify:
             if not event_symbol or event_symbol in subscribed_symbols or not subscribed_symbols:
                 try:
-                    await websocket.send_json(data)
-                except Exception:
-                    pass
+                    await websocket.send_json(processed_data)
+                except Exception as e:
+                    logger.error(f"Error broadcasting data to {websocket.client}: {e}", exc_info=True)
 
 manager = ConnectionManager()
+
+# Helper function to convert datetime objects in data structures
+def _convert_datetime_in_data(data: Any) -> Any:
+    """
+    Recursively traverses a data structure and converts datetime objects to ISO 8601 strings.
+    Handles dictionaries, lists, and bar data structures.
+    """
+    if isinstance(data, dict):
+        if "bars" in data and isinstance(data["bars"], list):
+            # Specifically process list of bars
+            converted_bars = []
+            for bar in data["bars"]:
+                if isinstance(bar, dict):
+                    converted_bar = {}
+                    for k, v in bar.items():
+                        if isinstance(v, datetime.datetime):
+                            converted_bar[k] = v.isoformat()
+                        else:
+                            converted_bar[k] = v
+                    converted_bars.append(converted_bar)
+                else: # Should not happen if bars are dicts
+                    converted_bars.append(bar)
+            return {**data, "bars": converted_bars}
+        else: # General dictionary processing
+            return {k: _convert_datetime_in_data(v) for k, v in data.items()}
+    elif isinstance(data, list):
+        return [_convert_datetime_in_data(item) for item in data]
+    elif isinstance(data, datetime.datetime):
+        return data.isoformat()
+    return data
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
@@ -198,24 +231,31 @@ async def websocket_endpoint(websocket: WebSocket):
                         
                         status_snapshot = last_fetch_status.copy()
                         
-                        filtered_bars = {
+                        raw_filtered_bars = {
                             s: b for s, b in status_snapshot.get("bars", {}).items()
                             if s in symbols
                         }
                         
+                        # Ensure datetimes are ISO strings before sending
+                        processed_filtered_bars = _convert_datetime_in_data(raw_filtered_bars)
+
                         response_payload = {
                             "event": "subscription_ack",
                             "subscribed_symbols": symbols,
-                            "bars": filtered_bars
+                            "bars": processed_filtered_bars
                         }
                         
                         await websocket.send_json(response_payload)
                         logger.info(f"Sent subscription acknowledgment with data to {websocket.client}")
 
-            except (json.JSONDecodeError, TypeError):
-                logger.warning(f"Received invalid message from {websocket.client}: {message_text}")
+            except (json.JSONDecodeError, TypeError) as e:
+                # Log the specific error if it's a TypeError, otherwise it's a JSONDecodeError
+                if isinstance(e, TypeError):
+                    logger.error(f"TypeError processing message from {websocket.client} (payload likely not JSON serializable): {message_text}, Error: {e}", exc_info=True)
+                else: # JSONDecodeError
+                    logger.warning(f"Received invalid JSON message from {websocket.client}: {message_text}, Error: {e}")
             except Exception as e:
-                logger.error(f"Error processing message from client {websocket.client}: {e}")
+                logger.error(f"Error processing message from client {websocket.client}: {e}", exc_info=True)
 
     except WebSocketDisconnect:
         logger.info(f"Client {websocket.client} gracefully disconnected.")
