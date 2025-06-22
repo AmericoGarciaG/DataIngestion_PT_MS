@@ -80,12 +80,6 @@ class Settings(BaseSettings):
                                                         # y usado para construir topic_id
     pubsub_historical_data_topic_id: str | None = None  # Se inicializa después de instanciar Settings
 
-    # Ya no necesitamos la propiedad fetch_timeframe aquí,
-    # el mapeo se hará en alpaca_service.py
-    # @property
-    # def fetch_timeframe(self) -> OldTimeFrame:
-    #     # ... lógica anterior ...
-
 # Cargar el archivo .env manualmente para asegurar que se cargue
 env_path = Path(__file__).resolve().parent.parent / '.env'
 load_dotenv(dotenv_path=env_path, override=True)
@@ -93,7 +87,7 @@ load_dotenv(dotenv_path=env_path, override=True)
 # Crear la instancia de configuración
 settings = Settings()
 
-# --- Bloques de Validación Adicional (como los tenías) ---
+# --- Bloques de Validación Adicional  ---
 if settings.alpaca_api_key_id == "DEFAULT_KEY_ID" or settings.alpaca_secret_key == "DEFAULT_SECRET_KEY":
     if not (os.getenv("TESTING", "false").lower() == "true" or os.getenv("GITHUB_ACTIONS", "false") == "true"): # No mostrar warning en tests o CI
         print("WARNING: Alpaca API Keys no completamente configuradas en .env (usando defaults). La aplicación podría no funcionar.")
@@ -104,7 +98,6 @@ if settings.schedule_trigger == 'cron' and (settings.schedule_hour is None or se
      raise ValueError("SCHEDULE_TRIGGER=cron requiere SCHEDULE_HOUR y SCHEDULE_MINUTE que sean enteros o strings casteables a int")
 
 # Renombrar para consistencia con .env y lo que esperan los clientes GCP
-# settings.google_cloud_project = settings.google_cloud_project_id # No es necesario, los clientes usan settings.google_cloud_project_id
 settings.pubsub_historical_data_topic_id = settings.pubsub_topic_name # Asegurar que gcp_clients.py use este
 
 '''
