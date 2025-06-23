@@ -69,47 +69,88 @@ async def check_root_endpoint():
 def print_data_update(parsed_data: dict, show_all_bars: bool = False):
     """
     Formatea e imprime la actualización de datos recibida del WebSocket,
-    manejando diferentes tipos de eventos.
+    manejando diferentes tipos de eventos de forma clara.
+    
+    Args:
+        parsed_data (dict): El objeto JSON recibido del servidor.
+        show_all_bars (bool): Flag para mostrar todas las barras o un resumen.
     """
+    # Se extrae el tipo de evento para dirigir la lógica de impresión.
     event_type = parsed_data.get("event")
 
+    # --- Manejo del evento 'connection_ack' ---
+    # Este es el primer mensaje que envía el servidor para confirmar la conexión.
     if event_type == "connection_ack":
         print("\n✅ === Connection Acknowledged by Server ===")
         print(f"Message: {parsed_data.get('message')}")
-        return
+        # Opcionalmente, se podría imprimir el estado completo inicial si se desea.
+        # print(json.dumps(parsed_data.get('latest_fetch_status'), indent=2))
+        return # Termina la función aquí para este evento.
 
+    # --- Manejo del evento 'subscription_ack' ---
+    # Este mensaje confirma que una suscripción fue recibida y procesada.
     if event_type == "subscription_ack":
         symbols = parsed_data.get('subscribed_symbols', [])
         print(f"\n✅ === Subscription Acknowledged for: {', '.join(symbols)} ===")
-        return
+        
+        # Revisa si el acuse de recibo contiene datos de barras iniciales.
+        bars_in_ack = parsed_data.get('bars', {})
+        if bars_in_ack:
+            print("--- Initial data received with acknowledgment ---")
+            for symbol, bars in bars_in_ack.items():
+                # Para no repetir código, se crea un payload falso de 'asset_update'
+                # y se vuelve a llamar a esta misma función para que lo imprima.
+                asset_update_payload = {
+                    "event": "asset_update",
+                    "symbol": symbol,
+                    "bars": bars,
+                    # Se puede añadir el timeframe si viniera en el ack, si no, se omite.
+                    "timeframe": parsed_data.get('timeframe') 
+                }
+                print_data_update(asset_update_payload, show_all_bars)
+        return # Termina la función aquí para este evento.
 
+    # --- Manejo del evento 'asset_update' ---
+    # Este es el evento principal que notifica nuevos datos para un activo.
     if event_type == "asset_update":
         symbol = parsed_data.get('symbol', 'Unknown')
         bars = parsed_data.get('bars', [])
         print(f"\n📈 === Asset Update for [{symbol}] ===")
         print(f"Timeframe: {parsed_data.get('timeframe')}, Bars received: {len(bars)}")
         if not bars: return
-        
+
         first_ts = bars[0]['timestamp']
         last_ts = bars[-1]['timestamp']
         print(f"Period: {first_ts} → {last_ts}")
 
+        # Lógica para mostrar todas las barras o un resumen.
         if show_all_bars or len(bars) <= 4:
-            for bar in bars: print(f"  {bar['timestamp']}: O=${bar['open']:.2f}, H=${bar['high']:.2f}, L=${bar['low']:.2f}, C=${bar['close']:.2f}, V={bar['volume']}")
+            for bar in bars:
+                print(f"  {bar['timestamp']}: O=${bar['open']:.2f}, H=${bar['high']:.2f}, L=${bar['low']:.2f}, C=${bar['close']:.2f}, V={bar['volume']}")
         else:
             print(f"  First bar: {bars[0]['timestamp']} C=${bars[0]['close']:.2f}")
             print("  ...")
             print(f"  Last bar:  {bars[-1]['timestamp']} C=${bars[-1]['close']:.2f}")
-    
-    elif event_type == "cycle_complete":
+        return # Termina la función aquí para este evento.
+
+    # --- Manejo del evento 'cycle_complete' ---
+    # Notifica que el servidor ha terminado un ciclo completo de fetch.
+    if event_type == "cycle_complete":
         success = parsed_data.get('success', False)
         emoji = "✅" if success else "⚠️"
         print(f"\n{emoji} === Fetch Cycle Complete ===")
         print(f"Timestamp: {parsed_data.get('timestamp_utc')}, Success: {success}")
+        status = parsed_data.get('status', {})
+        if status: # Solo muestra detalles si el objeto 'status' está presente
+             print(f"Assets Processed: {status.get('assets_processed_count')}, Total Bars Saved: {status.get('total_bars_saved_in_last_run')}")
+             if status.get('error_message'):
+                print(f"Error during cycle: {status.get('error_message')}")
+        return # Termina la función aquí para este evento.
     
-    else:
-        print("\nℹ️ === General Status Update / Unknown Event ===")
-        print(json.dumps(parsed_data, indent=2))
+    # --- Manejo por Defecto ---
+    # Si el evento no es ninguno de los conocidos, simplemente imprime el JSON.
+    print("\nℹ️ === General Status Update / Unknown Event ===")
+    print(json.dumps(parsed_data, indent=2))
 
 # --- Lógica Principal del Cliente ---
 async def listen_to_alpaca_data():

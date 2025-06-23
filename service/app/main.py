@@ -213,14 +213,23 @@ async def websocket_endpoint(websocket: WebSocket):
                     symbols = message_data.get("symbols", [])
                     if isinstance(symbols, list):
                         await manager.update_subscription(websocket, symbols)
-                        # Enviar una confirmación simple de la suscripción.
-                        # Los datos reales llegarán a través de los broadcasts de 'asset_update'.
-                        sub_ack_payload = {
-                            "event": "subscription_ack",
-                            "subscribed_symbols": symbols
+                        status_snapshot = last_fetch_status.copy()
+                        
+                        filtered_bars = {
+                            s: b for s, b in status_snapshot.get("bars", {}).items()
+                            if s in symbols
                         }
-                        await websocket.send_json(sub_ack_payload)
-                        logger.info(f"Sent subscription acknowledgment to {websocket.client} for {symbols}")
+                        
+                        # Crea un payload de respuesta que el cliente pueda entender
+                        response_payload = {
+                            "event": "subscription_ack", # "ack" = Acknowledgment
+                            "subscribed_symbols": symbols,
+                            "bars": filtered_bars # Puede estar vacío si no hay datos aún
+                        }
+                        
+                        # Convierte datetimes y envía la respuesta al cliente
+                        await websocket.send_json(_convert_datetimes_to_isoformat(response_payload))
+                        logger.info(f"Sent subscription acknowledgment with initial data to {websocket.client}")
 
             except (json.JSONDecodeError, TypeError) as e:
                 logger.warning(f"Error processing message from {websocket.client}: {e}")
