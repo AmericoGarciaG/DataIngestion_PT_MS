@@ -224,6 +224,7 @@ async def websocket_endpoint(websocket: WebSocket):
                         response_payload = {
                             "event": "subscription_ack", # "ack" = Acknowledgment
                             "subscribed_symbols": symbols,
+                            "timeframe": settings.fetch_timeframe_str, 
                             "bars": filtered_bars # Puede estar vacío si no hay datos aún
                         }
                         
