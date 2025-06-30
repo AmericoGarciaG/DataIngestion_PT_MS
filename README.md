@@ -189,10 +189,5 @@ El despliegue se realiza automáticamente a través de GitHub Actions cuando se 
 ---
 ```
 
-**Recomendaciones Adicionales para este README:**
 
-*   **Diagrama de Arquitectura:** Si puedes, crea un diagrama simple (incluso con herramientas online como diagrams.net/draw.io) y embébelo o enlaza a él.
-*   **Endpoints de la API:** Si tu API tiene más endpoints además del raíz y el WebSocket, documéntalos brevemente.
-*   **Detalles de Terraform:** Podrías añadir una nota sobre qué recursos principales crea Terraform.
-*   **Personalización:** Adapta la descripción, el nombre del proyecto y cualquier otro detalle específico a tu implementación.
 
